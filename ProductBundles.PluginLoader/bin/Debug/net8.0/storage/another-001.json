@@ -1,0 +1,10 @@
+{
+  "id": "another-001",
+  "productBundleId": "anotherplugin",
+  "productBundleVersion": "1.2.0",
+  "properties": {
+    "name": "Another Plugin Instance",
+    "created": "2025-07-16T22:03:04.964548+01:00",
+    "version": "1.2.0"
+  }
+}

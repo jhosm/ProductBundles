@@ -1,0 +1,89 @@
+{
+  "version": 3,
+  "targets": {
+    "net8.0": {
+      "ProductBundles.Sdk/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "compile": {
+          "bin/placeholder/ProductBundles.Sdk.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/ProductBundles.Sdk.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ProductBundles.Sdk/1.0.0": {
+      "type": "project",
+      "path": "../ProductBundles.Sdk/ProductBundles.Sdk.csproj",
+      "msbuildProject": "../ProductBundles.Sdk/ProductBundles.Sdk.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net8.0": [
+      "ProductBundles.Sdk >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "/Users/joaomiranda/.nuget/packages/": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "/Users/joaomiranda/CascadeProjects/windsurf-project/ProductBundles.SamplePlugin/ProductBundles.SamplePlugin.csproj",
+      "projectName": "ProductBundles.SamplePlugin",
+      "projectPath": "/Users/joaomiranda/CascadeProjects/windsurf-project/ProductBundles.SamplePlugin/ProductBundles.SamplePlugin.csproj",
+      "packagesPath": "/Users/joaomiranda/.nuget/packages/",
+      "outputPath": "/Users/joaomiranda/CascadeProjects/windsurf-project/ProductBundles.SamplePlugin/obj/",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "/Users/joaomiranda/.nuget/NuGet/NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net8.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "projectReferences": {
+            "/Users/joaomiranda/CascadeProjects/windsurf-project/ProductBundles.Sdk/ProductBundles.Sdk.csproj": {
+              "projectPath": "/Users/joaomiranda/CascadeProjects/windsurf-project/ProductBundles.Sdk/ProductBundles.Sdk.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      }
+    },
+    "frameworks": {
+      "net8.0": {
+        "targetAlias": "net8.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "/Users/joaomiranda/dotnet/sdk/8.0.100/PortableRuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}
