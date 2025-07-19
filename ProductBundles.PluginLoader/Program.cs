@@ -35,11 +35,11 @@ namespace ProductBundles.PluginLoader
                     })
                 .BuildServiceProvider();
 
-            var pluginLoaderLogger = serviceProvider.GetRequiredService<ILogger<ProductBundles.Core.PluginLoader>>();
+            var pluginLoaderLogger = serviceProvider.GetRequiredService<ILogger<ProductBundles.Core.ProductBundlesLoader>>();
             var pluginManagerLogger = serviceProvider.GetRequiredService<ILogger<ProductBundles.Core.PluginManager>>();
 
             // Create plugin loader instance with logger
-            var pluginLoader = new ProductBundles.Core.PluginLoader("plugins", pluginLoaderLogger);
+            var pluginLoader = new ProductBundles.Core.ProductBundlesLoader("plugins", pluginLoaderLogger);
             
             // Create plugin manager instance with logger
             var pluginManager = new ProductBundles.Core.PluginManager(pluginLoader, pluginManagerLogger);

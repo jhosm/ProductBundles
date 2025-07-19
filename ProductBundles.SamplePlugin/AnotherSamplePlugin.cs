@@ -34,7 +34,7 @@ namespace ProductBundles.SamplePlugin
             Console.WriteLine($"[{FriendlyName}] Initialization complete!");
         }
 
-        public ProductBundleInstance Execute(string eventName, ProductBundleInstance bundleInstance)
+        public ProductBundleInstance HandleEvent(string eventName, ProductBundleInstance bundleInstance)
         {
             Console.WriteLine($"[{FriendlyName}] Beginning execution phase...");
             Console.WriteLine($"[{FriendlyName}] Event triggered: {eventName}");

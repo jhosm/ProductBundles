@@ -36,12 +36,12 @@ namespace ProductBundles.Sdk
         void Initialize();
         
         /// <summary>
-        /// Executes the bundle's main functionality
+        /// Handles an event for the bundle
         /// </summary>
         /// <param name="eventName">The event that explains why the method was called</param>
         /// <param name="bundleInstance">The product bundle instance containing configuration and property values</param>
-        /// <returns>A ProductBundleInstance containing the results of the execution</returns>
-        ProductBundleInstance Execute(string eventName, ProductBundleInstance bundleInstance);
+        /// <returns>A ProductBundleInstance containing the results of the event handling</returns>
+        ProductBundleInstance HandleEvent(string eventName, ProductBundleInstance bundleInstance);
         
         /// <summary>
         /// Upgrades an existing ProductBundleInstance to the current ProductBundle version

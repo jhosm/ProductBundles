@@ -9,7 +9,7 @@ Sistema de plugins para carregar DLLs via reflection e instanciar classes que im
   - `Property`: Classe para definir propriedades dos plugins
   
 - **ProductBundles.Core**: Biblioteca core contendo:
-  - `PluginLoader`: Classe responsável por carregar plugins via reflection
+  - `ProductBundlesLoader`: Classe responsável por carregar plugins via reflection
   
 - **ProductBundles.PluginLoader**: Aplicação console que demonstra o uso do sistema de plugins
 
@@ -58,7 +58,7 @@ public class MeuPlugin : IAmAProductBundle
 
 ```csharp
 // Criar instância do carregador de plugins
-var pluginLoader = new PluginLoader("plugins");
+var pluginLoader = new ProductBundlesLoader("plugins");
 
 // Carregar todos os plugins da pasta
 var plugins = pluginLoader.LoadPlugins();
@@ -114,7 +114,7 @@ cp ProductBundles.Core/bin/Debug/net8.0/ProductBundles.Core.dll plugins/
 dotnet run --project ProductBundles.PluginLoader
 ```
 
-## Funcionalidades do PluginLoader
+## Funcionalidades do ProductBundlesLoader
 
 - **Carregamento Automático**: Escaneia a pasta "plugins" em busca de DLLs
 - **Reflection**: Usa reflection para encontrar classes que implementam `IAmAProductBundle`

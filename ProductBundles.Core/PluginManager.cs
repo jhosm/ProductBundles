@@ -11,7 +11,7 @@ namespace ProductBundles.Core
     /// </summary>
     public class PluginManager
     {
-        private readonly PluginLoader _pluginLoader;
+        private readonly ProductBundlesLoader _pluginLoader;
         private readonly ILogger<PluginManager> _logger;
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace ProductBundles.Core
         /// </summary>
         /// <param name="pluginLoader">The plugin loader instance</param>
         /// <param name="logger">Logger instance</param>
-        public PluginManager(PluginLoader pluginLoader, ILogger<PluginManager>? logger = null)
+        public PluginManager(ProductBundlesLoader pluginLoader, ILogger<PluginManager>? logger = null)
         {
             _pluginLoader = pluginLoader ?? throw new ArgumentNullException(nameof(pluginLoader));
             _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<PluginManager>.Instance;
@@ -72,8 +72,8 @@ namespace ProductBundles.Core
             {
                 try
                 {
-                    // Get the plugin's default property values
-                    var defaultValues = plugin.GetDefaultPropertyValues();
+                    // Get the plugin's default property values from its Properties collection
+                    var defaultValues = plugin.Properties.ToDictionary(p => p.Name, p => p.DefaultValue);
                     
                     // Create a dictionary with defaults and merge with provided values
                     var pluginPropertyValues = new Dictionary<string, object?>(defaultValues);
@@ -95,7 +95,7 @@ namespace ProductBundles.Core
                         properties: pluginPropertyValues
                     );
                     
-                    var result = plugin.Execute(eventName, bundleInstance);
+                    var result = plugin.HandleEvent(eventName, bundleInstance);
                     _logger.LogInformation("Executed plugin: {PluginName}", plugin.FriendlyName);
                     
                     // Optionally log the result

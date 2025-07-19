@@ -11,22 +11,22 @@ namespace ProductBundles.Core
     /// <summary>
     /// Service responsible for loading product bundle plugins
     /// </summary>
-    public class PluginLoader
+    public class ProductBundlesLoader
     {
         private readonly string _pluginsPath;
         private readonly List<IAmAProductBundle> _loadedPlugins;
-        private readonly ILogger<PluginLoader> _logger;
+        private readonly ILogger<ProductBundlesLoader> _logger;
 
         /// <summary>
-        /// Initializes a new instance of the PluginLoader class
+        /// Initializes a new instance of the ProductBundlesLoader class
         /// </summary>
         /// <param name="pluginsPath">Path to the plugins directory</param>
         /// <param name="logger">Logger instance</param>
-        public PluginLoader(string pluginsPath = "plugins", ILogger<PluginLoader>? logger = null)
+        public ProductBundlesLoader(string pluginsPath = "plugins", ILogger<ProductBundlesLoader>? logger = null)
         {
             _pluginsPath = pluginsPath;
             _loadedPlugins = new List<IAmAProductBundle>();
-            _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<PluginLoader>.Instance;
+            _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductBundlesLoader>.Instance;
         }
 
         /// <summary>

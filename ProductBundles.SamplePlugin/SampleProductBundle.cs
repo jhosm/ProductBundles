@@ -33,7 +33,7 @@ namespace ProductBundles.SamplePlugin
             // Perform initialization tasks here
         }
 
-        public ProductBundleInstance Execute(string eventName, ProductBundleInstance bundleInstance)
+        public ProductBundleInstance HandleEvent(string eventName, ProductBundleInstance bundleInstance)
         {
             Console.WriteLine($"[{FriendlyName}] Executing main functionality...");
             Console.WriteLine($"[{FriendlyName}] Event: {eventName}");
