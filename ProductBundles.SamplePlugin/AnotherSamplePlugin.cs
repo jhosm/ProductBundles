@@ -13,6 +13,8 @@ namespace ProductBundles.SamplePlugin
         
         public IReadOnlyList<Property> Properties { get; }
         
+        public IReadOnlyList<RecurringBackgroundJob> RecurringBackgroundJobs { get; }
+        
         public AnotherSamplePlugin()
         {
             Properties = new List<Property>
@@ -24,6 +26,34 @@ namespace ProductBundles.SamplePlugin
                 new Property("License", "The plugin license", "MIT"),
                 new Property("SupportedPlatforms", "Platforms this plugin supports", "Windows, Linux, macOS"),
                 new Property("LastUpdated", "When the plugin was last updated", DateTime.Now.ToString("yyyy-MM-dd"))
+            };
+            
+            RecurringBackgroundJobs = new List<RecurringBackgroundJob>
+            {
+                new RecurringBackgroundJob(
+                    "DataProcessing", 
+                    "0 */3 * * *", 
+                    "Processes accumulated data every 3 hours",
+                    new Dictionary<string, object?> { { "eventName", "data.process" }, { "batchSize", 100 } }
+                ),
+                new RecurringBackgroundJob(
+                    "SystemCleanup", 
+                    "30 4 * * *", 
+                    "Performs system cleanup daily at 4:30 AM",
+                    new Dictionary<string, object?> { { "eventName", "system.cleanup" }, { "cleanTempFiles", true } }
+                ),
+                new RecurringBackgroundJob(
+                    "MonthlyArchive", 
+                    "0 1 1 * *", 
+                    "Archives old data on the first day of each month",
+                    new Dictionary<string, object?> { { "eventName", "data.archive" }, { "retentionDays", 90 } }
+                ),
+                new RecurringBackgroundJob(
+                    "QuickStatusCheck", 
+                    "*/15 * * * *", 
+                    "Quick status check every 15 minutes during business hours",
+                    new Dictionary<string, object?> { { "eventName", "status.check" }, { "lightweight", true } }
+                )
             };
         }
 

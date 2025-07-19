@@ -13,6 +13,8 @@ namespace ProductBundles.SamplePlugin
         
         public IReadOnlyList<Property> Properties { get; }
         
+        public IReadOnlyList<RecurringBackgroundJob> RecurringBackgroundJobs { get; }
+        
         public SampleProductBundle()
         {
             Properties = new List<Property>
@@ -24,6 +26,28 @@ namespace ProductBundles.SamplePlugin
                 new Property("OutputDirectory", "Directory for output files", "./output"),
                 new Property("MaxRetryAttempts", "Maximum number of retry attempts", 3),
                 new Property("Priority", "Plugin execution priority", "Medium")
+            };
+            
+            RecurringBackgroundJobs = new List<RecurringBackgroundJob>
+            {
+                new RecurringBackgroundJob(
+                    "HealthCheck", 
+                    "*/5 * * * *", 
+                    "Performs a health check every 5 minutes",
+                    new Dictionary<string, object?> { { "eventName", "health.check" }, { "timeout", 30 } }
+                ),
+                new RecurringBackgroundJob(
+                    "DailyMaintenance", 
+                    "0 2 * * *", 
+                    "Runs daily maintenance tasks at 2 AM",
+                    new Dictionary<string, object?> { { "eventName", "maintenance.daily" }, { "cleanupOldLogs", true } }
+                ),
+                new RecurringBackgroundJob(
+                    "WeeklyReport", 
+                    "0 9 * * 1", 
+                    "Generates weekly reports every Monday at 9 AM",
+                    new Dictionary<string, object?> { { "eventName", "reporting.weekly" }, { "includeMetrics", true } }
+                )
             };
         }
 

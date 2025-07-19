@@ -31,6 +31,12 @@ namespace ProductBundles.Sdk
         IReadOnlyList<Property> Properties { get; }
         
         /// <summary>
+        /// Gets the list of recurring background jobs that this ProductBundle defines
+        /// Each job has a name and a cron schedule for automatic execution
+        /// </summary>
+        IReadOnlyList<RecurringBackgroundJob> RecurringBackgroundJobs { get; }
+        
+        /// <summary>
         /// Initializes the bundle
         /// </summary>
         void Initialize();
