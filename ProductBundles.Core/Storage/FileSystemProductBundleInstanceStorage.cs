@@ -42,7 +42,7 @@ namespace ProductBundles.Core.Storage
         }
 
         /// <inheritdoc/>
-        public async Task CreateAsync(ProductBundleInstance instance)
+        public async Task<bool> CreateAsync(ProductBundleInstance instance)
         {
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
@@ -58,7 +58,7 @@ namespace ProductBundles.Core.Storage
             {
                 if (File.Exists(filePath))
                 {
-                    throw new InvalidOperationException($"ProductBundleInstance with ID '{instance.Id}' already exists");
+                    return false;
                 }
 
                 var serializedData = _serializer.Serialize(instance);
@@ -66,6 +66,11 @@ namespace ProductBundles.Core.Storage
                 
                 _logger.LogInformation("Created ProductBundleInstance {InstanceId} at {FilePath}", 
                     instance.Id, filePath);
+                return true;
+            }
+            catch
+            {
+                return false;
             }
             finally
             {
@@ -165,7 +170,7 @@ namespace ProductBundles.Core.Storage
         }
 
         /// <inheritdoc/>
-        public async Task UpdateAsync(ProductBundleInstance instance)
+        public async Task<bool> UpdateAsync(ProductBundleInstance instance)
         {
             if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
@@ -181,7 +186,7 @@ namespace ProductBundles.Core.Storage
             {
                 if (!File.Exists(filePath))
                 {
-                    throw new InvalidOperationException($"ProductBundleInstance with ID '{instance.Id}' does not exist");
+                    return false;
                 }
 
                 var serializedData = _serializer.Serialize(instance);
@@ -189,6 +194,11 @@ namespace ProductBundles.Core.Storage
                 
                 _logger.LogInformation("Updated ProductBundleInstance {InstanceId} at {FilePath}", 
                     instance.Id, filePath);
+                return true;
+            }
+            catch
+            {
+                return false;
             }
             finally
             {

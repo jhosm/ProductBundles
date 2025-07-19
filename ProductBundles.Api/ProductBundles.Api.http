@@ -1,6 +1,67 @@
 @ProductBundles.Api_HostAddress = http://localhost:5077
 
-GET {{ProductBundles.Api_HostAddress}}/weatherforecast/
+# ProductBundles endpoints
+GET {{ProductBundles.Api_HostAddress}}/ProductBundles/
 Accept: application/json
+
+###
+
+GET {{ProductBundles.Api_HostAddress}}/ProductBundles/sampleplug
+Accept: application/json
+
+###
+
+# ProductBundleInstances CRUD endpoints
+
+# GET all ProductBundleInstances
+GET {{ProductBundles.Api_HostAddress}}/ProductBundleInstances
+Accept: application/json
+
+###
+
+# POST create new ProductBundleInstance
+POST {{ProductBundles.Api_HostAddress}}/ProductBundleInstances
+Content-Type: application/json
+
+{
+  "productBundleId": "sampleplug",
+  "productBundleVersion": "1.0.0",
+  "properties": {
+    "SampleProperty": "test value",
+    "AnotherProperty": 42
+  }
+}
+
+###
+
+# GET specific ProductBundleInstance by ID (replace with actual ID from create response)
+GET {{ProductBundles.Api_HostAddress}}/ProductBundleInstances/{instance-id}
+Accept: application/json
+
+###
+
+# PUT update ProductBundleInstance (replace with actual ID)
+PUT {{ProductBundles.Api_HostAddress}}/ProductBundleInstances/{instance-id}
+Content-Type: application/json
+
+{
+  "productBundleVersion": "1.0.1",
+  "properties": {
+    "SampleProperty": "updated test value",
+    "AnotherProperty": 100,
+    "NewProperty": "added during update"
+  }
+}
+
+###
+
+# GET ProductBundleInstances by ProductBundleId
+GET {{ProductBundles.Api_HostAddress}}/ProductBundleInstances/ByProductBundle/sampleplug
+Accept: application/json
+
+###
+
+# DELETE ProductBundleInstance (replace with actual ID)
+DELETE {{ProductBundles.Api_HostAddress}}/ProductBundleInstances/{instance-id}
 
 ###

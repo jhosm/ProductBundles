@@ -11,8 +11,8 @@ namespace ProductBundles.Core.Storage
         /// Creates a new ProductBundleInstance in storage
         /// </summary>
         /// <param name="instance">The ProductBundleInstance to create</param>
-        /// <returns>Task representing the async operation</returns>
-        Task CreateAsync(ProductBundleInstance instance);
+        /// <returns>True if the instance was created successfully, false if it already exists</returns>
+        Task<bool> CreateAsync(ProductBundleInstance instance);
         
         /// <summary>
         /// Retrieves a ProductBundleInstance by its ID
@@ -38,8 +38,8 @@ namespace ProductBundles.Core.Storage
         /// Updates an existing ProductBundleInstance in storage
         /// </summary>
         /// <param name="instance">The ProductBundleInstance to update</param>
-        /// <returns>Task representing the async operation</returns>
-        Task UpdateAsync(ProductBundleInstance instance);
+        /// <returns>True if the instance was updated successfully, false if it didn't exist</returns>
+        Task<bool> UpdateAsync(ProductBundleInstance instance);
         
         /// <summary>
         /// Deletes a ProductBundleInstance from storage
