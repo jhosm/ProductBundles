@@ -227,3 +227,5 @@ AppPackages/
 
 plugins/
 storage/
+bin/
+obj/
