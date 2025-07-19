@@ -1,8 +1,11 @@
 using ProductBundles.Api.Models;
+using ProductBundles.Api.Services;
 using ProductBundles.Core;
 using ProductBundles.Core.Extensions;
 using ProductBundles.Core.Storage;
 using ProductBundles.Sdk;
+using Hangfire;
+using Hangfire.MemoryStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +29,23 @@ builder.Services.AddProductBundleInstanceServices(
         jsonOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
+// Add Hangfire services
+builder.Services.AddHangfire(configuration => configuration
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseMemoryStorage()); // Use in-memory storage for development
+
+// Add Hangfire server
+builder.Services.AddHangfireServer(options =>
+{
+    options.Queues = new[] { "productbundles", "recurring", "default" };
+});
+
+// Register background service for managing ProductBundle recurring jobs
+builder.Services.AddScoped<ProductBundleBackgroundService>();
+builder.Services.AddScoped<HangfireRecurringJobManager>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -36,6 +56,29 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Add Hangfire middleware
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[] { new HangfireAuthorizationFilter() }
+});
+
+// Initialize ProductBundle recurring jobs on startup
+using (var scope = app.Services.CreateScope())
+{
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<HangfireRecurringJobManager>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        await recurringJobManager.InitializeRecurringJobsAsync();
+        logger.LogInformation("Successfully initialized ProductBundle recurring jobs");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to initialize ProductBundle recurring jobs");
+    }
+}
 
 // ProductBundles endpoint
 app.MapGet("/ProductBundles", (ProductBundlesLoader loader) =>
@@ -237,6 +280,88 @@ app.MapGet("/ProductBundleInstances/ByProductBundle/{productBundleId}", async (s
     return Results.Ok(dtos);
 })
 .WithName("GetProductBundleInstancesByProductBundleId")
+.WithOpenApi();
+
+// Hangfire Recurring Jobs Management Endpoints
+
+// GET all registered recurring jobs
+app.MapGet("/RecurringJobs", (HangfireRecurringJobManager manager) =>
+{
+    var jobs = manager.GetRegisteredJobsInfo();
+    return Results.Ok(jobs);
+})
+.WithName("GetRecurringJobs")
+.WithOpenApi();
+
+// POST refresh recurring jobs for a specific ProductBundle
+app.MapPost("/RecurringJobs/Refresh/{productBundleId}", async (string productBundleId, HangfireRecurringJobManager manager) =>
+{
+    try
+    {
+        await manager.RefreshPluginRecurringJobsAsync(productBundleId);
+        return Results.Ok($"Successfully refreshed recurring jobs for ProductBundle '{productBundleId}'");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to refresh recurring jobs for ProductBundle '{productBundleId}': {ex.Message}");
+    }
+})
+.WithName("RefreshRecurringJobs")
+.WithOpenApi();
+
+// POST refresh all recurring jobs from all ProductBundles
+app.MapPost("/RecurringJobs/RefreshAll", async (HangfireRecurringJobManager manager) =>
+{
+    try
+    {
+        await manager.InitializeRecurringJobsAsync();
+        return Results.Ok("Successfully refreshed all recurring jobs from ProductBundles");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to refresh recurring jobs: {ex.Message}");
+    }
+})
+.WithName("RefreshAllRecurringJobs")
+.WithOpenApi();
+
+// DELETE recurring jobs for a specific ProductBundle
+app.MapDelete("/RecurringJobs/{productBundleId}", async (string productBundleId, HangfireRecurringJobManager manager) =>
+{
+    try
+    {
+        await manager.RemovePluginRecurringJobsAsync(productBundleId);
+        return Results.Ok($"Successfully removed recurring jobs for ProductBundle '{productBundleId}'");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to remove recurring jobs for ProductBundle '{productBundleId}': {ex.Message}");
+    }
+})
+.WithName("RemoveRecurringJobs")
+.WithOpenApi();
+
+// POST manually trigger a specific recurring job
+app.MapPost("/RecurringJobs/Trigger/{productBundleId}/{jobName}", (string productBundleId, string jobName, ProductBundleBackgroundService backgroundService) =>
+{
+    try
+    {
+        var jobId = BackgroundJob.Enqueue<ProductBundleBackgroundService>(
+            service => service.ExecuteRecurringJobAsync(
+                productBundleId, 
+                jobName, 
+                new Dictionary<string, object?> { { "triggeredManually", true }, { "triggerTime", DateTime.UtcNow } }
+            )
+        );
+        
+        return Results.Ok(new { JobId = jobId, Message = $"Manually triggered job '{jobName}' for ProductBundle '{productBundleId}'" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Failed to trigger job '{jobName}' for ProductBundle '{productBundleId}': {ex.Message}");
+    }
+})
+.WithName("TriggerRecurringJob")
 .WithOpenApi();
 
 app.Run();
