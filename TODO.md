@@ -1,0 +1,2 @@
+- Colocar execução recorrente a carregar as instâncias e a lançá-las
+- Colocar as atuações sobre as instâncias a serem executadas via Hangfire.

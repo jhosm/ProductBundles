@@ -71,7 +71,7 @@ using (var scope = app.Services.CreateScope())
     
     try
     {
-        await recurringJobManager.InitializeRecurringJobsAsync();
+        recurringJobManager.InitializeRecurringJobs();
         logger.LogInformation("Successfully initialized ProductBundle recurring jobs");
     }
     catch (Exception ex)
@@ -263,105 +263,6 @@ app.MapDelete("/ProductBundleInstances/{id}", async (string id, IProductBundleIn
     return Results.NoContent();
 })
 .WithName("DeleteProductBundleInstance")
-.WithOpenApi();
-
-// GET ProductBundleInstances by ProductBundleId
-app.MapGet("/ProductBundleInstances/ByProductBundle/{productBundleId}", async (string productBundleId, IProductBundleInstanceStorage storage) =>
-{
-    var instances = await storage.GetByProductBundleIdAsync(productBundleId);
-    var dtos = instances.Select(instance => new ProductBundleInstanceDto
-    {
-        Id = instance.Id,
-        ProductBundleId = instance.ProductBundleId,
-        ProductBundleVersion = instance.ProductBundleVersion,
-        Properties = instance.Properties
-    }).ToList();
-    
-    return Results.Ok(dtos);
-})
-.WithName("GetProductBundleInstancesByProductBundleId")
-.WithOpenApi();
-
-// Hangfire Recurring Jobs Management Endpoints
-
-// GET all registered recurring jobs
-app.MapGet("/RecurringJobs", (HangfireRecurringJobManager manager) =>
-{
-    var jobs = manager.GetRegisteredJobsInfo();
-    return Results.Ok(jobs);
-})
-.WithName("GetRecurringJobs")
-.WithOpenApi();
-
-// POST refresh recurring jobs for a specific ProductBundle
-app.MapPost("/RecurringJobs/Refresh/{productBundleId}", async (string productBundleId, HangfireRecurringJobManager manager) =>
-{
-    try
-    {
-        await manager.RefreshPluginRecurringJobsAsync(productBundleId);
-        return Results.Ok($"Successfully refreshed recurring jobs for ProductBundle '{productBundleId}'");
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem($"Failed to refresh recurring jobs for ProductBundle '{productBundleId}': {ex.Message}");
-    }
-})
-.WithName("RefreshRecurringJobs")
-.WithOpenApi();
-
-// POST refresh all recurring jobs from all ProductBundles
-app.MapPost("/RecurringJobs/RefreshAll", async (HangfireRecurringJobManager manager) =>
-{
-    try
-    {
-        await manager.InitializeRecurringJobsAsync();
-        return Results.Ok("Successfully refreshed all recurring jobs from ProductBundles");
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem($"Failed to refresh recurring jobs: {ex.Message}");
-    }
-})
-.WithName("RefreshAllRecurringJobs")
-.WithOpenApi();
-
-// DELETE recurring jobs for a specific ProductBundle
-app.MapDelete("/RecurringJobs/{productBundleId}", async (string productBundleId, HangfireRecurringJobManager manager) =>
-{
-    try
-    {
-        await manager.RemovePluginRecurringJobsAsync(productBundleId);
-        return Results.Ok($"Successfully removed recurring jobs for ProductBundle '{productBundleId}'");
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem($"Failed to remove recurring jobs for ProductBundle '{productBundleId}': {ex.Message}");
-    }
-})
-.WithName("RemoveRecurringJobs")
-.WithOpenApi();
-
-// POST manually trigger a specific recurring job
-app.MapPost("/RecurringJobs/Trigger/{productBundleId}/{jobName}", (string productBundleId, string jobName, ProductBundleBackgroundService backgroundService) =>
-{
-    try
-    {
-        var jobId = BackgroundJob.Enqueue<ProductBundleBackgroundService>(
-            service => service.ExecuteRecurringJobAsync(
-                productBundleId, 
-                jobName, 
-                new Dictionary<string, object?> { { "triggeredManually", true }, { "triggerTime", DateTime.UtcNow } }
-            )
-        );
-        
-        return Results.Ok(new { JobId = jobId, Message = $"Manually triggered job '{jobName}' for ProductBundle '{productBundleId}'" });
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem($"Failed to trigger job '{jobName}' for ProductBundle '{productBundleId}': {ex.Message}");
-    }
-})
-.WithName("TriggerRecurringJob")
 .WithOpenApi();
 
 app.Run();

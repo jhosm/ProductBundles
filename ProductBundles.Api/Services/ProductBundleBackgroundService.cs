@@ -26,6 +26,7 @@ public class ProductBundleBackgroundService
 
     /// <summary>
     /// Executes a ProductBundle plugin asynchronously in response to a recurring background job
+    /// Loads all ProductBundleInstance objects from storage and processes each one
     /// </summary>
     /// <param name="productBundleId">The ID of the ProductBundle to execute</param>
     /// <param name="recurringJobName">The name of the recurring job being executed</param>
@@ -61,39 +62,69 @@ public class ProductBundleBackgroundService
             // Get the event name from parameters (or use a default)
             var eventName = parameters.GetValueOrDefault("eventName")?.ToString() ?? $"recurring.{recurringJobName}";
 
-            // Create a temporary ProductBundleInstance for the job execution
-            var executionInstance = new ProductBundleInstance(
-                id: Guid.NewGuid().ToString(),
-                productBundleId: productBundleId,
-                productBundleVersion: plugin.Version
-            );
+            // Load all ProductBundleInstance objects from storage
+            var allInstances = await _instanceStorage.GetAllAsync();
+            var processedCount = 0;
+            var updatedCount = 0;
 
-            // Add all job parameters to the instance
-            foreach (var param in parameters)
+            foreach (var instance in allInstances)
             {
-                executionInstance.Properties[param.Key] = param.Value;
+                try
+                {
+                    // Add recurring job metadata to the instance properties
+                    var instanceCopy = new ProductBundleInstance(
+                        instance.Id,
+                        instance.ProductBundleId, 
+                        instance.ProductBundleVersion,
+                        new Dictionary<string, object?>(instance.Properties)
+                    );
+
+                    // Add job parameters and metadata
+                    foreach (var param in parameters)
+                    {
+                        instanceCopy.Properties[param.Key] = param.Value;
+                    }
+
+                    instanceCopy.Properties["_recurringJobName"] = recurringJobName;
+                    instanceCopy.Properties["_cronSchedule"] = recurringJob.CronSchedule;
+                    instanceCopy.Properties["_executionTimestamp"] = DateTime.UtcNow;
+                    instanceCopy.Properties["_jobDescription"] = recurringJob.Description;
+
+                    // Execute the plugin's HandleEvent method
+                    var result = plugin.HandleEvent(eventName, instanceCopy);
+                    processedCount++;
+
+                    // Update the instance in storage with the result
+                    var updated = await _instanceStorage.UpdateAsync(result);
+                    
+                    if (updated)
+                    {
+                        updatedCount++;
+                        _logger.LogDebug("Successfully processed and updated instance '{InstanceId}' for recurring job '{RecurringJobName}'", 
+                            instance.Id, recurringJobName);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to update instance '{InstanceId}' after processing recurring job '{RecurringJobName}'", 
+                            instance.Id, recurringJobName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing instance '{InstanceId}' for recurring job '{RecurringJobName}'", 
+                        instance.Id, recurringJobName);
+                    // Continue processing other instances
+                }
             }
 
-            // Add recurring job metadata
-            executionInstance.Properties["_recurringJobName"] = recurringJobName;
-            executionInstance.Properties["_cronSchedule"] = recurringJob.CronSchedule;
-            executionInstance.Properties["_executionTimestamp"] = DateTime.UtcNow;
-            executionInstance.Properties["_jobDescription"] = recurringJob.Description;
-
-            // Execute the plugin's HandleEvent method
-            var result = plugin.HandleEvent(eventName, executionInstance);
-
-            _logger.LogInformation("Successfully executed recurring job '{RecurringJobName}' for ProductBundle '{ProductBundleId}'. Result instance: {ResultInstanceId}", 
-                recurringJobName, productBundleId, result.Id);
-
-            // Optionally store the result (you may want to make this configurable)
-            // await _instanceStorage.CreateAsync(result);
+            _logger.LogInformation("Completed recurring job '{RecurringJobName}' for ProductBundle '{ProductBundleId}'. Processed {ProcessedCount} instances, updated {UpdatedCount} instances", 
+                recurringJobName, productBundleId, processedCount, updatedCount);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing recurring job '{RecurringJobName}' for ProductBundle '{ProductBundleId}'", 
                 recurringJobName, productBundleId);
-            throw; // Re-throw to allow Hangfire to handle retries
+            throw;
         }
     }
 

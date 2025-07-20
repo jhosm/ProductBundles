@@ -59,11 +59,23 @@ namespace ProductBundles.SamplePlugin
 
         public ProductBundleInstance HandleEvent(string eventName, ProductBundleInstance bundleInstance)
         {
+            // Handle event count tracking
+            if (bundleInstance.Properties.ContainsKey("handleEventCount"))
+            {
+                var currentCount = Convert.ToInt32(bundleInstance.Properties["handleEventCount"]);
+                bundleInstance.Properties["handleEventCount"] = currentCount + 1;
+            }
+            else
+            {
+                bundleInstance.Properties["handleEventCount"] = 1;
+            }
+            
             Console.WriteLine($"[{FriendlyName}] Executing main functionality...");
             Console.WriteLine($"[{FriendlyName}] Event: {eventName}");
             Console.WriteLine($"[{FriendlyName}] Bundle Instance ID: {bundleInstance.Id}");
             Console.WriteLine($"[{FriendlyName}] Product Bundle ID: {bundleInstance.ProductBundleId}");
             Console.WriteLine($"[{FriendlyName}] Product Bundle Version: {bundleInstance.ProductBundleVersion}");
+            Console.WriteLine($"[{FriendlyName}] Handle Event Count: {bundleInstance.Properties["handleEventCount"]}");
             Console.WriteLine($"[{FriendlyName}] Received {bundleInstance.Properties.Count} property values");
             
             // Display received properties
@@ -79,22 +91,14 @@ namespace ProductBundles.SamplePlugin
             
             Console.WriteLine($"[{FriendlyName}] Execution completed successfully!");
             
-            // Return result as ProductBundleInstance
-            var resultInstance = new ProductBundleInstance(
-                id: Guid.NewGuid().ToString(),
-                productBundleId: bundleInstance.ProductBundleId,
-                productBundleVersion: bundleInstance.ProductBundleVersion
-            );
             
             // Add result properties
-            resultInstance.Properties["status"] = "success";
-            resultInstance.Properties["message"] = "Sample plugin executed successfully";
-            resultInstance.Properties["timestamp"] = DateTime.Now;
-            resultInstance.Properties["processedProperties"] = bundleInstance.Properties.Count;
-            resultInstance.Properties["originalInstanceId"] = bundleInstance.Id;
-            resultInstance.Properties["eventName"] = eventName;
+            bundleInstance.Properties["status"] = "success";
+            bundleInstance.Properties["message"] = "Sample plugin executed successfully";
+            bundleInstance.Properties["timestamp"] = DateTime.Now;
+            bundleInstance.Properties["eventName"] = eventName;
             
-            return resultInstance;
+            return bundleInstance;
         }
 
         public ProductBundleInstance UpgradeProductBundleInstance(ProductBundleInstance bundleInstance)

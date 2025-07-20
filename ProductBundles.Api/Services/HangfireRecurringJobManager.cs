@@ -27,7 +27,7 @@ public class HangfireRecurringJobManager
     /// <summary>
     /// Initializes all recurring jobs from loaded ProductBundles
     /// </summary>
-    public async Task InitializeRecurringJobsAsync()
+    public void InitializeRecurringJobs()
     {
         _logger.LogInformation("Initializing recurring jobs from ProductBundles...");
 
@@ -40,7 +40,7 @@ public class HangfireRecurringJobManager
         {
             try
             {
-                var jobsRegistered = await RegisterPluginRecurringJobsAsync(plugin);
+                var jobsRegistered = RegisterPluginRecurringJobs(plugin);
                 totalJobsRegistered += jobsRegistered;
 
                 _logger.LogInformation("Registered {JobCount} recurring jobs for ProductBundle '{ProductBundleId}'", 
@@ -62,7 +62,7 @@ public class HangfireRecurringJobManager
     /// </summary>
     /// <param name="plugin">The ProductBundle plugin</param>
     /// <returns>Number of jobs registered</returns>
-    public async Task<int> RegisterPluginRecurringJobsAsync(IAmAProductBundle plugin)
+    public int RegisterPluginRecurringJobs(IAmAProductBundle plugin)
     {
         if (plugin.RecurringBackgroundJobs == null || !plugin.RecurringBackgroundJobs.Any())
         {
@@ -87,17 +87,19 @@ public class HangfireRecurringJobManager
                 // Create unique job ID: productBundleId + recurringJobName (as requested)
                 var hangfireJobId = $"{plugin.Id}.{recurringJob.Name}";
 
-                // Create the job expression
+                // Create the job expression for async method
                 Expression<Func<ProductBundleBackgroundService, Task>> jobExpression = service => 
                     service.ExecuteRecurringJobAsync(plugin.Id, recurringJob.Name, recurringJob.Parameters ?? new Dictionary<string, object?>());
 
-                // Register the recurring job with Hangfire
+                // Register the recurring job with Hangfire using the non-obsolete overload
                 _recurringJobManager.AddOrUpdate(
                     recurringJobId: hangfireJobId,
                     methodCall: jobExpression,
                     cronExpression: recurringJob.CronSchedule,
-                    timeZone: TimeZoneInfo.Local,
-                    queue: "recurring"
+                    options: new RecurringJobOptions
+                    {
+                        TimeZone = TimeZoneInfo.Local
+                    }
                 );
 
                 jobsRegistered++;
@@ -119,7 +121,7 @@ public class HangfireRecurringJobManager
     /// Removes all recurring jobs for a specific ProductBundle
     /// </summary>
     /// <param name="productBundleId">The ProductBundle ID</param>
-    public async Task RemovePluginRecurringJobsAsync(string productBundleId)
+    public void RemovePluginRecurringJobs(string productBundleId)
     {
         _logger.LogInformation("Removing recurring jobs for ProductBundle '{ProductBundleId}'", productBundleId);
 
@@ -143,81 +145,4 @@ public class HangfireRecurringJobManager
             throw;
         }
     }
-
-    /// <summary>
-    /// Refreshes recurring jobs for a specific ProductBundle (removes old ones and adds new ones)
-    /// </summary>
-    /// <param name="productBundleId">The ProductBundle ID</param>
-    public async Task RefreshPluginRecurringJobsAsync(string productBundleId)
-    {
-        _logger.LogInformation("Refreshing recurring jobs for ProductBundle '{ProductBundleId}'", productBundleId);
-
-        try
-        {
-            // Remove existing jobs
-            await RemovePluginRecurringJobsAsync(productBundleId);
-
-            // Register new jobs
-            var plugin = _pluginLoader.GetPluginById(productBundleId);
-            if (plugin != null)
-            {
-                await RegisterPluginRecurringJobsAsync(plugin);
-            }
-
-            _logger.LogInformation("Successfully refreshed recurring jobs for ProductBundle '{ProductBundleId}'", productBundleId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to refresh recurring jobs for ProductBundle '{ProductBundleId}'", productBundleId);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// Gets information about registered recurring jobs
-    /// </summary>
-    /// <returns>List of job information</returns>
-    public List<RecurringJobInfo> GetRegisteredJobsInfo()
-    {
-        var plugins = _pluginLoader.LoadedPlugins.Any() ? _pluginLoader.LoadedPlugins : _pluginLoader.LoadPlugins();
-        var jobInfoList = new List<RecurringJobInfo>();
-
-        foreach (var plugin in plugins)
-        {
-            if (plugin.RecurringBackgroundJobs != null)
-            {
-                foreach (var recurringJob in plugin.RecurringBackgroundJobs)
-                {
-                    var hangfireJobId = $"{plugin.Id}.{recurringJob.Name}";
-
-                    jobInfoList.Add(new RecurringJobInfo
-                    {
-                        JobId = hangfireJobId,
-                        ProductBundleId = plugin.Id,
-                        ProductBundleName = plugin.FriendlyName,
-                        RecurringJobName = recurringJob.Name,
-                        CronSchedule = recurringJob.CronSchedule,
-                        Description = recurringJob.Description,
-                        Parameters = recurringJob.Parameters
-                    });
-                }
-            }
-        }
-
-        return jobInfoList;
-    }
-}
-
-/// <summary>
-/// Information about a registered recurring job
-/// </summary>
-public class RecurringJobInfo
-{
-    public string JobId { get; set; } = string.Empty;
-    public string ProductBundleId { get; set; } = string.Empty;
-    public string ProductBundleName { get; set; } = string.Empty;
-    public string RecurringJobName { get; set; } = string.Empty;
-    public string CronSchedule { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public Dictionary<string, object?>? Parameters { get; set; }
 }
