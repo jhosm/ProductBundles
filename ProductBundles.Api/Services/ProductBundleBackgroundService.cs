@@ -62,8 +62,8 @@ public class ProductBundleBackgroundService
             // Get the event name from parameters (or use a default)
             var eventName = parameters.GetValueOrDefault("eventName")?.ToString() ?? $"recurring.{recurringJobName}";
 
-            // Load all ProductBundleInstance objects from storage
-            var allInstances = await _instanceStorage.GetAllAsync();
+            // Load ProductBundleInstance objects for this specific ProductBundle from storage
+            var allInstances = await _instanceStorage.GetByProductBundleIdAsync(productBundleId);
             var processedCount = 0;
             var updatedCount = 0;
 
