@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.PluginLoader
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.Api", "ProductBundles.Api\ProductBundles.Api.csproj", "{463A2E50-A108-4569-8ECA-A6732BC6B953}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.UnitTests", "ProductBundles.UnitTests\ProductBundles.UnitTests.csproj", "{2E9C4633-B0E2-4F88-8696-459D89F75101}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{463A2E50-A108-4569-8ECA-A6732BC6B953}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{463A2E50-A108-4569-8ECA-A6732BC6B953}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{463A2E50-A108-4569-8ECA-A6732BC6B953}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E9C4633-B0E2-4F88-8696-459D89F75101}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E9C4633-B0E2-4F88-8696-459D89F75101}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E9C4633-B0E2-4F88-8696-459D89F75101}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E9C4633-B0E2-4F88-8696-459D89F75101}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

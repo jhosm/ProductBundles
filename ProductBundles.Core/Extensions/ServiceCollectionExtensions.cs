@@ -22,18 +22,18 @@ namespace ProductBundles.Core.Extensions
             this IServiceCollection services, 
             Action<JsonSerializerOptions>? configureOptions = null)
         {
-            // Register JSON serializer options
-            services.AddSingleton<JsonSerializerOptions>(provider =>
+            // Create and configure JSON serializer options immediately
+            var options = new JsonSerializerOptions
             {
-                var options = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true
-                };
-                
-                configureOptions?.Invoke(options);
-                return options;
-            });
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            };
+            
+            // Call configuration action immediately during registration
+            configureOptions?.Invoke(options);
+            
+            // Register the configured options as a singleton
+            services.AddSingleton(options);
 
             // Register the default serializer
             services.TryAddSingleton<IProductBundleInstanceSerializer, JsonProductBundleInstanceSerializer>();
