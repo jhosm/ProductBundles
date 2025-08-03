@@ -4,6 +4,7 @@ using ProductBundles.Core.Serialization;
 using ProductBundles.Core.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using MongoDB.Driver;
 
 namespace ProductBundles.Core.Extensions
 {
@@ -96,6 +97,59 @@ namespace ProductBundles.Core.Extensions
                 throw new ArgumentException("Storage directory must be specified in options", nameof(configure));
 
             return services.AddProductBundleInstanceFileSystemStorage(options.StorageDirectory);
+        }
+
+        /// <summary>
+        /// Adds ProductBundle MongoDB storage services to the DI container
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="connectionString">The MongoDB connection string</param>
+        /// <param name="databaseName">The MongoDB database name</param>
+        /// <param name="collectionName">The MongoDB collection name (optional, defaults to "ProductBundleInstances")</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddProductBundleInstanceMongoStorage(
+            this IServiceCollection services,
+            string connectionString,
+            string databaseName,
+            string? collectionName = null)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("Connection string cannot be null or empty", nameof(connectionString));
+
+            if (string.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentException("Database name cannot be null or empty", nameof(databaseName));
+
+            collectionName ??= "ProductBundleInstances";
+
+            // Register MongoDB client as singleton
+            services.TryAddSingleton<IMongoClient>(provider =>
+            {
+                return new MongoClient(connectionString);
+            });
+
+            // Register MongoDB database as singleton
+            services.TryAddSingleton<IMongoDatabase>(provider =>
+            {
+                var client = provider.GetRequiredService<IMongoClient>();
+                return client.GetDatabase(databaseName);
+            });
+
+            // Register MongoDB collection as singleton
+            services.TryAddSingleton<IMongoCollection<ProductBundles.Sdk.ProductBundleInstance>>(provider =>
+            {
+                var database = provider.GetRequiredService<IMongoDatabase>();
+                return database.GetCollection<ProductBundles.Sdk.ProductBundleInstance>(collectionName);
+            });
+
+            // Register the storage implementation
+            services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
+            {
+                var logger = provider.GetService<ILogger<MongoProductBundleInstanceStorage>>();
+                
+                return new MongoProductBundleInstanceStorage(connectionString, databaseName, collectionName, logger);
+            });
+
+            return services;
         }
 
         /// <summary>

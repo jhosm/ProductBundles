@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ProductBundles.Core.Extensions;
 using ProductBundles.Core.Serialization;
 using ProductBundles.Core.Storage;
+using MongoDB.Driver;
 
 namespace ProductBundles.UnitTests
 {
@@ -288,6 +289,121 @@ namespace ProductBundles.UnitTests
 
             // Should have exactly one registration due to TryAddSingleton
             Assert.AreEqual(1, storageServices.Count());
+        }
+
+        [TestMethod]
+        public void AddProductBundleInstanceMongoStorage_WithConnectionString_RegistersServices()
+        {
+            // Arrange
+            const string connectionString = "mongodb://localhost:27017";
+            const string databaseName = "testdb";
+            const string collectionName = "testcollection";
+
+            // Act
+            _services.AddProductBundleInstanceMongoStorage(connectionString, databaseName, collectionName);
+            _serviceProvider = _services.BuildServiceProvider();
+
+            // Assert
+            var mongoClient = _serviceProvider.GetService<IMongoClient>();
+            Assert.IsNotNull(mongoClient, "IMongoClient should be registered");
+
+            var mongoDatabase = _serviceProvider.GetService<IMongoDatabase>();
+            Assert.IsNotNull(mongoDatabase, "IMongoDatabase should be registered");
+            Assert.AreEqual(databaseName, mongoDatabase.DatabaseNamespace.DatabaseName, "Database name should match");
+
+            var mongoCollection = _serviceProvider.GetService<IMongoCollection<ProductBundles.Sdk.ProductBundleInstance>>();
+            Assert.IsNotNull(mongoCollection, "IMongoCollection should be registered");
+            Assert.AreEqual(collectionName, mongoCollection.CollectionNamespace.CollectionName, "Collection name should match");
+
+            var storage = _serviceProvider.GetService<IProductBundleInstanceStorage>();
+            Assert.IsNotNull(storage, "IProductBundleInstanceStorage should be registered");
+            Assert.IsInstanceOfType(storage, typeof(MongoProductBundleInstanceStorage), "Storage should be MongoProductBundleInstanceStorage");
+        }
+
+        [TestMethod]
+        public void AddProductBundleInstanceMongoStorage_WithDefaultCollectionName_RegistersServicesWithDefaultName()
+        {
+            // Arrange
+            const string connectionString = "mongodb://localhost:27017";
+            const string databaseName = "testdb";
+
+            // Act
+            _services.AddProductBundleInstanceMongoStorage(connectionString, databaseName);
+            _serviceProvider = _services.BuildServiceProvider();
+
+            // Assert
+            var mongoCollection = _serviceProvider.GetService<IMongoCollection<ProductBundles.Sdk.ProductBundleInstance>>();
+            Assert.IsNotNull(mongoCollection, "IMongoCollection should be registered");
+            Assert.AreEqual("ProductBundleInstances", mongoCollection.CollectionNamespace.CollectionName, "Collection name should default to 'ProductBundleInstances'");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void AddProductBundleInstanceMongoStorage_WithNullConnectionString_ThrowsArgumentException()
+        {
+            // Act & Assert
+            _services.AddProductBundleInstanceMongoStorage((string)null!, "testdb");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void AddProductBundleInstanceMongoStorage_WithEmptyConnectionString_ThrowsArgumentException()
+        {
+            // Act & Assert
+            _services.AddProductBundleInstanceMongoStorage(string.Empty, "testdb");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void AddProductBundleInstanceMongoStorage_WithWhitespaceConnectionString_ThrowsArgumentException()
+        {
+            // Act & Assert
+            _services.AddProductBundleInstanceMongoStorage("   ", "testdb");
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void AddProductBundleInstanceMongoStorage_WithNullDatabaseName_ThrowsArgumentException()
+        {
+            // Act & Assert
+            _services.AddProductBundleInstanceMongoStorage("mongodb://localhost:27017", (string)null!);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void AddProductBundleInstanceMongoStorage_WithEmptyDatabaseName_ThrowsArgumentException()
+        {
+            // Act & Assert
+            _services.AddProductBundleInstanceMongoStorage("mongodb://localhost:27017", string.Empty);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentException))]
+        public void AddProductBundleInstanceMongoStorage_WithWhitespaceDatabaseName_ThrowsArgumentException()
+        {
+            // Act & Assert
+            _services.AddProductBundleInstanceMongoStorage("mongodb://localhost:27017", "   ");
+        }
+
+        [TestMethod]
+        public void AddProductBundleInstanceMongoStorage_RegisteredAsSingleton_ReturnsSameInstance()
+        {
+            // Arrange
+            const string connectionString = "mongodb://localhost:27017";
+            const string databaseName = "testdb";
+
+            _services.AddProductBundleInstanceMongoStorage(connectionString, databaseName);
+            _serviceProvider = _services.BuildServiceProvider();
+
+            // Act
+            var storage1 = _serviceProvider.GetService<IProductBundleInstanceStorage>();
+            var storage2 = _serviceProvider.GetService<IProductBundleInstanceStorage>();
+            var mongoClient1 = _serviceProvider.GetService<IMongoClient>();
+            var mongoClient2 = _serviceProvider.GetService<IMongoClient>();
+
+            // Assert
+            Assert.AreSame(storage1, storage2, "Storage instances should be the same (singleton)");
+            Assert.AreSame(mongoClient1, mongoClient2, "MongoClient instances should be the same (singleton)");
         }
     }
 }
