@@ -13,13 +13,17 @@ dotnet build ProductBundles.SamplePlugin/ProductBundles.SamplePlugin.csproj -o p
 echo "Creating plugin directories..."
 mkdir -p ProductBundles.Api/plugins
 mkdir -p ProductBundles.PluginLoader/bin/Debug/net8.0/plugins
+mkdir -p ProductBundles.UnitTests/plugins
 
-# Copy the plugin DLL to both ProductBundles.Api and ProductBundles.PluginLoader
+# Copy the plugin DLL to ProductBundles.Api, ProductBundles.PluginLoader, and ProductBundles.UnitTests
 echo "Copying plugins to ProductBundles.Api..."
 cp plugins/SamplePlugin/ProductBundles.SamplePlugin.dll ProductBundles.Api/plugins/
 
 echo "Copying plugins to ProductBundles.PluginLoader..."
 cp plugins/SamplePlugin/ProductBundles.SamplePlugin.dll ProductBundles.PluginLoader/bin/Debug/net8.0/plugins/
+
+echo "Copying plugins to ProductBundles.UnitTests..."
+cp plugins/SamplePlugin/ProductBundles.SamplePlugin.dll ProductBundles.UnitTests/plugins/
 
 # Build the main application
 echo "Building ProductBundles.PluginLoader..."
