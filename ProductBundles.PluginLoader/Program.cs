@@ -36,14 +36,9 @@ namespace ProductBundles.PluginLoader
                 .BuildServiceProvider();
 
             var pluginLoaderLogger = serviceProvider.GetRequiredService<ILogger<ProductBundles.Core.ProductBundlesLoader>>();
-            var pluginManagerLogger = serviceProvider.GetRequiredService<ILogger<ProductBundles.Core.PluginManager>>();
-
             // Create plugin loader instance with logger
             var pluginLoader = new ProductBundles.Core.ProductBundlesLoader("plugins", pluginLoaderLogger);
             
-            // Create plugin manager instance with logger
-            var pluginManager = new ProductBundles.Core.PluginManager(pluginLoader, pluginManagerLogger);
-
             try
             {
                 // Load all plugins from the plugins directory
@@ -69,26 +64,6 @@ namespace ProductBundles.PluginLoader
                     Console.WriteLine();
                 }
 
-                // Initialize all plugins
-                Console.WriteLine("=== Initializing Plugins ===");
-                pluginManager.InitializePlugins();
-                Console.WriteLine();
-
-                // Execute all plugins
-                Console.WriteLine("=== Executing Plugins ===");
-                pluginManager.ExecutePlugins();
-                Console.WriteLine();
-
-                // Demonstrate plugin search
-                Console.WriteLine("=== Plugin Search Example ===");
-                if (plugins.Count() > 0)
-                {
-                    var firstPlugin = plugins[0];
-                    var foundPlugin = pluginManager.GetPluginById(firstPlugin.Id);
-                    Console.WriteLine($"Found plugin by ID '{firstPlugin.Id}': {foundPlugin?.FriendlyName ?? "Not found"}");
-                }
-                Console.WriteLine();
-
                 Console.WriteLine("=== Plugin execution completed ===");
                 Console.WriteLine();
 
@@ -107,8 +82,6 @@ namespace ProductBundles.PluginLoader
             }
             finally
             {
-                // Clean up
-                pluginManager.DisposePlugins();
                 serviceProvider.Dispose();
             }
 
