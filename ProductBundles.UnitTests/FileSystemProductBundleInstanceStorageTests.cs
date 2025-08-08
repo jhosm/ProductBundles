@@ -332,45 +332,6 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public async Task GetAllAsync_EmptyStorage_ReturnsEmptyCollection()
-        {
-            // Arrange
-            var storage = new FileSystemProductBundleInstanceStorage(_tempDirectory, _serializer, _logger);
-
-            // Act
-            var result = await storage.GetAllAsync();
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.AreEqual(0, result.Count());
-        }
-
-        [TestMethod]
-        public async Task GetAllAsync_WithMultipleInstances_ReturnsAllInstances()
-        {
-            // Arrange
-            var storage = new FileSystemProductBundleInstanceStorage(_tempDirectory, _serializer, _logger);
-            var instance1 = new ProductBundleInstance("id1", "bundle-a", "1.0.0");
-            var instance2 = new ProductBundleInstance("id2", "bundle-b", "2.0.0");
-            var instance3 = new ProductBundleInstance("id3", "bundle-a", "1.5.0");
-            
-            await storage.CreateAsync(instance1);
-            await storage.CreateAsync(instance2);
-            await storage.CreateAsync(instance3);
-
-            // Act
-            var result = await storage.GetAllAsync();
-
-            // Assert
-            Assert.IsNotNull(result);
-            var instances = result.ToList();
-            Assert.AreEqual(3, instances.Count);
-            
-            var ids = instances.Select(i => i.Id).OrderBy(id => id).ToList();
-            CollectionAssert.AreEquivalent(new[] { "id1", "id2", "id3" }, ids);
-        }
-
-        [TestMethod]
         public async Task GetByProductBundleIdAsync_WithMatchingInstances_ReturnsFilteredInstances()
         {
             // Arrange
@@ -614,8 +575,6 @@ namespace ProductBundles.UnitTests
 
             // Act & Assert - Total counts
             Assert.AreEqual(6, await storage.GetCountAsync());
-            var allInstances = await storage.GetAllAsync();
-            Assert.AreEqual(6, allInstances.Count());
 
             // Act & Assert - Plugin1 filtering
             var plugin1Instances = await storage.GetByProductBundleIdAsync("plugin1");

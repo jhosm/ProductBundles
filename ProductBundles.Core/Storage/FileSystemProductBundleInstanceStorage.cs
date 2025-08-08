@@ -115,8 +115,11 @@ namespace ProductBundles.Core.Storage
         }
 
         /// <inheritdoc/>
-        public async Task<IEnumerable<ProductBundleInstance>> GetAllAsync()
+        public async Task<IEnumerable<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId)
         {
+            if (string.IsNullOrWhiteSpace(productBundleId))
+                throw new ArgumentException("ProductBundle ID cannot be null or empty", nameof(productBundleId));
+
             await _semaphore.WaitAsync();
             try
             {
@@ -132,7 +135,10 @@ namespace ProductBundles.Core.Storage
                         var serializedData = await File.ReadAllTextAsync(filePath);
                         if (_serializer.TryDeserialize(serializedData, out var instance) && instance != null)
                         {
-                            instances.Add(instance);
+                            if (instance.ProductBundleId == productBundleId)
+                            {
+                                instances.Add(instance);
+                            }
                         }
                         else
                         {
@@ -145,28 +151,15 @@ namespace ProductBundles.Core.Storage
                     }
                 }
 
-                _logger.LogInformation("Retrieved {InstanceCount} ProductBundleInstances from storage", instances.Count);
+                _logger.LogDebug("Found {InstanceCount} ProductBundleInstances for ProductBundle {ProductBundleId}", 
+                    instances.Count, productBundleId);
+                
                 return instances;
             }
             finally
             {
                 _semaphore.Release();
             }
-        }
-
-        /// <inheritdoc/>
-        public async Task<IEnumerable<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId)
-        {
-            if (string.IsNullOrWhiteSpace(productBundleId))
-                throw new ArgumentException("ProductBundle ID cannot be null or empty", nameof(productBundleId));
-
-            var allInstances = await GetAllAsync();
-            var filteredInstances = allInstances.Where(i => i.ProductBundleId == productBundleId).ToList();
-            
-            _logger.LogDebug("Found {InstanceCount} ProductBundleInstances for ProductBundle {ProductBundleId}", 
-                filteredInstances.Count, productBundleId);
-            
-            return filteredInstances;
         }
 
         /// <inheritdoc/>

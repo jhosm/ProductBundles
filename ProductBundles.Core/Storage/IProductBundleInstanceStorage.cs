@@ -21,11 +21,6 @@ namespace ProductBundles.Core.Storage
         /// <returns>The ProductBundleInstance if found, null otherwise</returns>
         Task<ProductBundleInstance?> GetAsync(string id);
         
-        /// <summary>
-        /// Retrieves all ProductBundleInstance objects in storage
-        /// </summary>
-        /// <returns>Collection of all ProductBundleInstance objects</returns>
-        Task<IEnumerable<ProductBundleInstance>> GetAllAsync();
         
         /// <summary>
         /// Retrieves all ProductBundleInstance objects for a specific ProductBundle

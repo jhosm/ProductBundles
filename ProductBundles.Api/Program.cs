@@ -139,23 +139,6 @@ app.MapGet("/ProductBundles/{id}", (string id, ProductBundlesLoader loader) =>
 
 // ProductBundleInstance CRUD endpoints
 
-// GET all ProductBundleInstances
-app.MapGet("/ProductBundleInstances", async (IProductBundleInstanceStorage storage) =>
-{
-    var instances = await storage.GetAllAsync();
-    var dtos = instances.Select(instance => new ProductBundleInstanceDto
-    {
-        Id = instance.Id,
-        ProductBundleId = instance.ProductBundleId,
-        ProductBundleVersion = instance.ProductBundleVersion,
-        Properties = instance.Properties
-    }).ToList();
-    
-    return Results.Ok(dtos);
-})
-.WithName("GetProductBundleInstances")
-.WithOpenApi();
-
 // GET specific ProductBundleInstance by ID
 app.MapGet("/ProductBundleInstances/{id}", async (string id, IProductBundleInstanceStorage storage) =>
 {

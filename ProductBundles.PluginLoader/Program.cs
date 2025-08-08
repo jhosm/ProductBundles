@@ -231,15 +231,6 @@ namespace ProductBundles.PluginLoader
                 }
                 Console.WriteLine();
 
-                // Retrieve all instances
-                Console.WriteLine("Retrieving all instances...");
-                var allInstances = await storage.GetAllAsync();
-                foreach (var instance in allInstances)
-                {
-                    Console.WriteLine($"  {instance.Id} (Bundle: {instance.ProductBundleId} v{instance.ProductBundleVersion})");
-                }
-                Console.WriteLine();
-
                 // Retrieve by ProductBundle ID
                 Console.WriteLine("Retrieving instances by ProductBundle ID...");
                 var samplePluginInstances = await storage.GetByProductBundleIdAsync("sampleplug");
