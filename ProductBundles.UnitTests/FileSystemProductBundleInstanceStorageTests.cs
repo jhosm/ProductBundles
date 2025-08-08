@@ -331,62 +331,11 @@ namespace ProductBundles.UnitTests
                 storage.ExistsAsync(""));
         }
 
-        [TestMethod]
-        public async Task GetByProductBundleIdAsync_WithMatchingInstances_ReturnsFilteredInstances()
-        {
-            // Arrange
-            var storage = new FileSystemProductBundleInstanceStorage(_tempDirectory, _serializer, _logger);
-            var instance1 = new ProductBundleInstance("id1", "bundle-a", "1.0.0");
-            var instance2 = new ProductBundleInstance("id2", "bundle-b", "2.0.0");
-            var instance3 = new ProductBundleInstance("id3", "bundle-a", "1.5.0");
-            
-            await storage.CreateAsync(instance1);
-            await storage.CreateAsync(instance2);
-            await storage.CreateAsync(instance3);
 
-            // Act
-            var result = await storage.GetByProductBundleIdAsync("bundle-a");
 
-            // Assert
-            Assert.IsNotNull(result);
-            var instances = result.ToList();
-            Assert.AreEqual(2, instances.Count);
-            
-            foreach (var instance in instances)
-            {
-                Assert.AreEqual("bundle-a", instance.ProductBundleId);
-            }
-            
-            var ids = instances.Select(i => i.Id).OrderBy(id => id).ToList();
-            CollectionAssert.AreEquivalent(new[] { "id1", "id3" }, ids);
-        }
 
-        [TestMethod]
-        public async Task GetByProductBundleIdAsync_WithNoMatchingInstances_ReturnsEmptyCollection()
-        {
-            // Arrange
-            var storage = new FileSystemProductBundleInstanceStorage(_tempDirectory, _serializer, _logger);
-            var instance1 = new ProductBundleInstance("id1", "bundle-a", "1.0.0");
-            await storage.CreateAsync(instance1);
 
-            // Act
-            var result = await storage.GetByProductBundleIdAsync("non-existent-bundle");
 
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.AreEqual(0, result.Count());
-        }
-
-        [TestMethod]
-        public async Task GetByProductBundleIdAsync_EmptyProductBundleId_ThrowsArgumentException()
-        {
-            // Arrange
-            var storage = new FileSystemProductBundleInstanceStorage(_tempDirectory, _serializer, _logger);
-
-            // Act & Assert
-            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
-                storage.GetByProductBundleIdAsync(""));
-        }
 
         [TestMethod]
         public async Task GetCountAsync_EmptyStorage_ReturnsZero()
@@ -577,26 +526,26 @@ namespace ProductBundles.UnitTests
             Assert.AreEqual(6, await storage.GetCountAsync());
 
             // Act & Assert - Plugin1 filtering
-            var plugin1Instances = await storage.GetByProductBundleIdAsync("plugin1");
-            Assert.AreEqual(3, plugin1Instances.Count());
+            var plugin1Result = await storage.GetByProductBundleIdAsync("plugin1", new PaginationRequest(1, 1000));
+            Assert.AreEqual(3, plugin1Result.Items.Count());
             Assert.AreEqual(3, await storage.GetCountByProductBundleIdAsync("plugin1"));
-            Assert.IsTrue(plugin1Instances.All(i => i.ProductBundleId == "plugin1"));
+            Assert.IsTrue(plugin1Result.Items.All(i => i.ProductBundleId == "plugin1"));
 
             // Act & Assert - Plugin2 filtering
-            var plugin2Instances = await storage.GetByProductBundleIdAsync("plugin2");
-            Assert.AreEqual(2, plugin2Instances.Count());
+            var plugin2Result = await storage.GetByProductBundleIdAsync("plugin2", new PaginationRequest(1, 1000));
+            Assert.AreEqual(2, plugin2Result.Items.Count());
             Assert.AreEqual(2, await storage.GetCountByProductBundleIdAsync("plugin2"));
-            Assert.IsTrue(plugin2Instances.All(i => i.ProductBundleId == "plugin2"));
+            Assert.IsTrue(plugin2Result.Items.All(i => i.ProductBundleId == "plugin2"));
 
             // Act & Assert - Plugin3 filtering
-            var plugin3Instances = await storage.GetByProductBundleIdAsync("plugin3");
-            Assert.AreEqual(1, plugin3Instances.Count());
+            var plugin3Result = await storage.GetByProductBundleIdAsync("plugin3", new PaginationRequest(1, 1000));
+            Assert.AreEqual(1, plugin3Result.Items.Count());
             Assert.AreEqual(1, await storage.GetCountByProductBundleIdAsync("plugin3"));
-            Assert.IsTrue(plugin3Instances.All(i => i.ProductBundleId == "plugin3"));
+            Assert.IsTrue(plugin3Result.Items.All(i => i.ProductBundleId == "plugin3"));
 
             // Act & Assert - Non-existent plugin filtering
-            var nonExistentInstances = await storage.GetByProductBundleIdAsync("non-existent");
-            Assert.AreEqual(0, nonExistentInstances.Count());
+            var nonExistentResult = await storage.GetByProductBundleIdAsync("non-existent", new PaginationRequest(1, 1000));
+            Assert.AreEqual(0, nonExistentResult.Items.Count());
             Assert.AreEqual(0, await storage.GetCountByProductBundleIdAsync("non-existent"));
         }
 
@@ -667,16 +616,7 @@ namespace ProductBundles.UnitTests
                 storage.ExistsAsync(null!));
         }
 
-        [TestMethod]
-        public async Task GetByProductBundleIdAsync_NullProductBundleId_ThrowsArgumentException()
-        {
-            // Arrange
-            var storage = new FileSystemProductBundleInstanceStorage(_tempDirectory, _serializer, _logger);
 
-            // Act & Assert
-            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
-                storage.GetByProductBundleIdAsync(null!));
-        }
 
         #region GetByProductBundleIdAsync Pagination Tests
 

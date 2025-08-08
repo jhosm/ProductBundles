@@ -114,53 +114,7 @@ namespace ProductBundles.Core.Storage
             }
         }
 
-        /// <inheritdoc/>
-        public async Task<IEnumerable<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId)
-        {
-            if (string.IsNullOrWhiteSpace(productBundleId))
-                throw new ArgumentException("ProductBundle ID cannot be null or empty", nameof(productBundleId));
 
-            await _semaphore.WaitAsync();
-            try
-            {
-                var instances = new List<ProductBundleInstance>();
-                var files = Directory.GetFiles(_storageDirectory, $"*{_serializer.FileExtension}");
-                
-                _logger.LogDebug("Found {FileCount} instance files in {StorageDirectory}", files.Length, _storageDirectory);
-
-                foreach (var filePath in files)
-                {
-                    try
-                    {
-                        var serializedData = await File.ReadAllTextAsync(filePath);
-                        if (_serializer.TryDeserialize(serializedData, out var instance) && instance != null)
-                        {
-                            if (instance.ProductBundleId == productBundleId)
-                            {
-                                instances.Add(instance);
-                            }
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Failed to deserialize instance from file: {FilePath}", filePath);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error reading instance file: {FilePath}", filePath);
-                    }
-                }
-
-                _logger.LogDebug("Found {InstanceCount} ProductBundleInstances for ProductBundle {ProductBundleId}", 
-                    instances.Count, productBundleId);
-                
-                return instances;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
 
         /// <inheritdoc/>
         public async Task<PaginatedResult<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId, PaginationRequest paginationRequest)
@@ -328,8 +282,9 @@ namespace ProductBundles.Core.Storage
             if (string.IsNullOrWhiteSpace(productBundleId))
                 throw new ArgumentException("ProductBundle ID cannot be null or empty", nameof(productBundleId));
 
-            var instances = await GetByProductBundleIdAsync(productBundleId);
-            var count = instances.Count();
+            var paginationRequest = new PaginationRequest(pageNumber: 1, pageSize: 1000);
+            var paginatedResult = await GetByProductBundleIdAsync(productBundleId, paginationRequest);
+            var count = paginatedResult.Items.Count();
             
             _logger.LogDebug("ProductBundleInstance count for ProductBundle {ProductBundleId}: {Count}", 
                 productBundleId, count);

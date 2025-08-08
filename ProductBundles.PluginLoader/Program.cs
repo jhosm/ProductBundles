@@ -233,7 +233,9 @@ namespace ProductBundles.PluginLoader
 
                 // Retrieve by ProductBundle ID
                 Console.WriteLine("Retrieving instances by ProductBundle ID...");
-                var samplePluginInstances = await storage.GetByProductBundleIdAsync("sampleplug");
+                var paginationRequest = new PaginationRequest(pageNumber: 1, pageSize: 1000);
+                var paginatedResult = await storage.GetByProductBundleIdAsync("sampleplug", paginationRequest);
+                var samplePluginInstances = paginatedResult.Items;
                 Console.WriteLine($"Found {samplePluginInstances.Count()} instances for 'sampleplug':");
                 foreach (var instance in samplePluginInstances)
                 {

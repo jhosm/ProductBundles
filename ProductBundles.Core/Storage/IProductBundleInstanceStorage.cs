@@ -22,12 +22,7 @@ namespace ProductBundles.Core.Storage
         Task<ProductBundleInstance?> GetAsync(string id);
         
         
-        /// <summary>
-        /// Retrieves all ProductBundleInstance objects for a specific ProductBundle
-        /// </summary>
-        /// <param name="productBundleId">The ProductBundle ID to filter by</param>
-        /// <returns>Collection of ProductBundleInstance objects for the specified ProductBundle</returns>
-        Task<IEnumerable<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId);
+
         
         /// <summary>
         /// Retrieves ProductBundleInstance objects for a specific ProductBundle with pagination

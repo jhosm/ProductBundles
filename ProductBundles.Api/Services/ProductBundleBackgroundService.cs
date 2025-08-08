@@ -53,7 +53,9 @@ public class ProductBundleBackgroundService
                 var eventName = parameters.GetValueOrDefault("eventName")?.ToString() ?? $"recurring.{recurringJobName}";
 
                 // Load ProductBundleInstance objects for this specific ProductBundle from storage
-                var allInstances = await _instanceStorage.GetByProductBundleIdAsync(productBundleId);
+                var paginationRequest = new PaginationRequest(pageNumber: 1, pageSize: 1000);
+                var paginatedResult = await _instanceStorage.GetByProductBundleIdAsync(productBundleId, paginationRequest);
+                var allInstances = paginatedResult.Items;
                 var processedCount = 0;
                 var updatedCount = 0;
 
@@ -135,7 +137,9 @@ public class ProductBundleBackgroundService
             productBundleId: productBundleId,
             operation: async (plugin) =>
             {
-                var instances = await _instanceStorage.GetByProductBundleIdAsync(productBundleId);
+                var paginationRequest = new PaginationRequest(pageNumber: 1, pageSize: 1000);
+                var paginatedResult = await _instanceStorage.GetByProductBundleIdAsync(productBundleId, paginationRequest);
+                var instances = paginatedResult.Items;
                 var upgradedCount = 0;
 
                 foreach (var instance in instances)
