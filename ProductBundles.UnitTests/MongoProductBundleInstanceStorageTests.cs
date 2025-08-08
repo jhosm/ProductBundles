@@ -22,6 +22,38 @@ namespace ProductBundles.UnitTests
             _logger = loggerFactory.CreateLogger<MongoProductBundleInstanceStorage>();
         }
 
+        [TestInitialize]
+        public async Task TestInitialize()
+        {
+            // Clean up any existing test data before each test
+            await CleanupTestData();
+        }
+
+        [TestCleanup]
+        public async Task TestCleanup()
+        {
+            // Clean up test data after each test
+            await CleanupTestData();
+        }
+
+        private async Task CleanupTestData()
+        {
+            try
+            {
+                var client = new MongoClient(TestConnectionString);
+                var database = client.GetDatabase(TestDatabaseName);
+                var collection = database.GetCollection<ProductBundleInstance>(TestCollectionName);
+                
+                // Clear all documents from the test collection
+                await collection.DeleteManyAsync(Builders<ProductBundleInstance>.Filter.Empty);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail tests due to cleanup issues
+                Console.WriteLine($"Test cleanup failed: {ex.Message}");
+            }
+        }
+
         [TestMethod]
         public void Constructor_WithValidParameters_ShouldInitializeSuccessfully()
         {
@@ -636,6 +668,297 @@ namespace ProductBundles.UnitTests
 
             // Act
             await storage.GetByProductBundleIdAsync("   ");
+        }
+
+        #endregion
+
+        #region GetByProductBundleIdAsync Pagination Tests
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPagination_ReturnsCorrectPage()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            
+            // Create 15 instances for the same ProductBundle
+            for (int i = 1; i <= 15; i++)
+            {
+                var instance = new ProductBundleInstance($"id{i}", "test-bundle", "1.0.0");
+                await storage.CreateAsync(instance);
+            }
+            
+            var paginationRequest = new PaginationRequest(2, 5); // Page 2, 5 items per page
+
+            // Act
+            var result = await storage.GetByProductBundleIdAsync("test-bundle", paginationRequest);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(2, result.PageNumber);
+            Assert.AreEqual(5, result.PageSize);
+            Assert.AreEqual(5, result.Items.Count());
+            Assert.IsTrue(result.HasPreviousPage);
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationFirstPage_ReturnsCorrectMetadata()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            
+            // Create 12 instances for the same ProductBundle
+            for (int i = 1; i <= 12; i++)
+            {
+                var instance = new ProductBundleInstance($"id{i}", "test-bundle", "1.0.0");
+                await storage.CreateAsync(instance);
+            }
+            
+            var paginationRequest = new PaginationRequest(1, 10);
+
+            // Act
+            var result = await storage.GetByProductBundleIdAsync("test-bundle", paginationRequest);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.PageNumber);
+            Assert.AreEqual(10, result.PageSize);
+            Assert.AreEqual(10, result.Items.Count());
+            Assert.IsFalse(result.HasPreviousPage);
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationLastPage_ReturnsCorrectMetadata()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            
+            // Create 12 instances for the same ProductBundle
+            for (int i = 1; i <= 12; i++)
+            {
+                var instance = new ProductBundleInstance($"id{i}", "test-bundle", "1.0.0");
+                await storage.CreateAsync(instance);
+            }
+            
+            var paginationRequest = new PaginationRequest(2, 10); // Last page
+
+            // Act
+            var result = await storage.GetByProductBundleIdAsync("test-bundle", paginationRequest);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(2, result.PageNumber);
+            Assert.AreEqual(10, result.PageSize);
+            Assert.AreEqual(2, result.Items.Count()); // Only 2 items on last page
+            Assert.IsTrue(result.HasPreviousPage);
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationNoMatches_ReturnsEmptyResult()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            
+            // Create instances for different ProductBundle
+            var instance = new ProductBundleInstance("id1", "different-bundle", "1.0.0");
+            await storage.CreateAsync(instance);
+            
+            var paginationRequest = new PaginationRequest(1, 10);
+
+            // Act
+            var result = await storage.GetByProductBundleIdAsync("test-bundle", paginationRequest);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.PageNumber);
+            Assert.AreEqual(10, result.PageSize);
+            Assert.AreEqual(0, result.Items.Count());
+            Assert.IsFalse(result.HasPreviousPage);
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationNullProductBundleId_ThrowsArgumentException()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            var paginationRequest = new PaginationRequest(1, 10);
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+                storage.GetByProductBundleIdAsync(null!, paginationRequest));
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationEmptyProductBundleId_ThrowsArgumentException()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            var paginationRequest = new PaginationRequest(1, 10);
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+                storage.GetByProductBundleIdAsync("", paginationRequest));
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationWhitespaceProductBundleId_ThrowsArgumentException()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            var paginationRequest = new PaginationRequest(1, 10);
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<ArgumentException>(() =>
+                storage.GetByProductBundleIdAsync("   ", paginationRequest));
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithNullPaginationRequest_ThrowsArgumentNullException()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<ArgumentNullException>(() =>
+                storage.GetByProductBundleIdAsync("test-bundle", null!));
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationMixedProductBundles_FiltersCorrectly()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            
+            // Create instances for different ProductBundles
+            for (int i = 1; i <= 10; i++)
+            {
+                var instance1 = new ProductBundleInstance($"bundle-a-{i}", "bundle-a", "1.0.0");
+                var instance2 = new ProductBundleInstance($"bundle-b-{i}", "bundle-b", "1.0.0");
+                await storage.CreateAsync(instance1);
+                await storage.CreateAsync(instance2);
+            }
+            
+            var paginationRequest = new PaginationRequest(1, 5);
+
+            // Act
+            var result = await storage.GetByProductBundleIdAsync("bundle-a", paginationRequest);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(5, result.Items.Count()); // Should only return items for current page
+            
+            // Verify all returned items are for bundle-a
+            foreach (var item in result.Items)
+            {
+                Assert.AreEqual("bundle-a", item.ProductBundleId);
+            }
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationLargePageSize_ReturnsAllAvailableItems()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            
+            // Create 5 instances for the same ProductBundle
+            for (int i = 1; i <= 5; i++)
+            {
+                var instance = new ProductBundleInstance($"id{i}", "test-bundle", "1.0.0");
+                await storage.CreateAsync(instance);
+            }
+            
+            var paginationRequest = new PaginationRequest(1, 100); // Request more than available
+
+            // Act
+            var result = await storage.GetByProductBundleIdAsync("test-bundle", paginationRequest);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.AreEqual(1, result.PageNumber);
+            Assert.AreEqual(100, result.PageSize);
+            Assert.AreEqual(5, result.Items.Count()); // Should return all available items
+            Assert.IsFalse(result.HasPreviousPage);
+        }
+
+        [TestMethod]
+        public async Task GetByProductBundleIdAsync_WithPaginationOrderConsistency_ReturnsConsistentResults()
+        {
+            // Arrange
+            var storage = new MongoProductBundleInstanceStorage(
+                TestConnectionString,
+                TestDatabaseName,
+                TestCollectionName,
+                _logger);
+            
+            // Create 10 instances for the same ProductBundle with predictable IDs
+            var createdInstances = new List<ProductBundleInstance>();
+            for (int i = 1; i <= 10; i++)
+            {
+                var instance = new ProductBundleInstance($"id{i:00}", "test-bundle", "1.0.0");
+                createdInstances.Add(instance);
+                await storage.CreateAsync(instance);
+            }
+            
+            var firstPageRequest = new PaginationRequest(1, 5);
+            var secondPageRequest = new PaginationRequest(2, 5);
+
+            // Act
+            var firstPageResult = await storage.GetByProductBundleIdAsync("test-bundle", firstPageRequest);
+            var secondPageResult = await storage.GetByProductBundleIdAsync("test-bundle", secondPageRequest);
+
+            // Assert
+            Assert.IsNotNull(firstPageResult);
+            Assert.IsNotNull(secondPageResult);
+            Assert.AreEqual(5, firstPageResult.Items.Count());
+            Assert.AreEqual(5, secondPageResult.Items.Count());
+            
+            // Verify no overlap between pages
+            var firstPageIds = firstPageResult.Items.Select(i => i.Id).ToHashSet();
+            var secondPageIds = secondPageResult.Items.Select(i => i.Id).ToHashSet();
+            Assert.IsFalse(firstPageIds.Overlaps(secondPageIds), "Pages should not have overlapping items");
+            
+            // Verify all items are accounted for
+            var allReturnedIds = firstPageIds.Union(secondPageIds);
+            Assert.AreEqual(10, allReturnedIds.Count());
         }
 
         #endregion

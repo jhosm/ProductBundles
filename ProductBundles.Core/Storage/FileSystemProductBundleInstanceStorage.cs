@@ -163,6 +163,68 @@ namespace ProductBundles.Core.Storage
         }
 
         /// <inheritdoc/>
+        public async Task<PaginatedResult<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId, PaginationRequest paginationRequest)
+        {
+            if (string.IsNullOrWhiteSpace(productBundleId))
+                throw new ArgumentException("ProductBundle ID cannot be null or empty", nameof(productBundleId));
+            
+            if (paginationRequest == null)
+                throw new ArgumentNullException(nameof(paginationRequest));
+
+            await _semaphore.WaitAsync();
+            try
+            {
+                var allInstances = new List<ProductBundleInstance>();
+                var files = Directory.GetFiles(_storageDirectory, $"*{_serializer.FileExtension}");
+                
+                _logger.LogDebug("Found {FileCount} instance files in {StorageDirectory} for paginated query", files.Length, _storageDirectory);
+
+                foreach (var filePath in files)
+                {
+                    try
+                    {
+                        var serializedData = await File.ReadAllTextAsync(filePath);
+                        if (_serializer.TryDeserialize(serializedData, out var instance) && instance != null)
+                        {
+                            if (instance.ProductBundleId == productBundleId)
+                            {
+                                allInstances.Add(instance);
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Failed to deserialize instance from file: {FilePath}", filePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error reading instance file: {FilePath}", filePath);
+                    }
+                }
+
+                var totalItems = allInstances.Count;
+                var paginatedItems = allInstances
+                    .Skip(paginationRequest.Skip)
+                    .Take(paginationRequest.PageSize)
+                    .ToList();
+
+                _logger.LogDebug("Returning page {PageNumber} with {ItemCount} items for ProductBundle {ProductBundleId}", 
+                    paginationRequest.PageNumber, 
+                    paginatedItems.Count, 
+                    productBundleId);
+                
+                return new PaginatedResult<ProductBundleInstance>(
+                    paginatedItems, 
+                    paginationRequest.PageNumber, 
+                    paginationRequest.PageSize);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task<bool> UpdateAsync(ProductBundleInstance instance)
         {
             if (instance == null)

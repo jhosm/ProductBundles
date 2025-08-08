@@ -30,6 +30,14 @@ namespace ProductBundles.Core.Storage
         Task<IEnumerable<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId);
         
         /// <summary>
+        /// Retrieves ProductBundleInstance objects for a specific ProductBundle with pagination
+        /// </summary>
+        /// <param name="productBundleId">The ProductBundle ID to filter by</param>
+        /// <param name="paginationRequest">Pagination parameters</param>
+        /// <returns>Paginated result containing ProductBundleInstance objects for the specified ProductBundle</returns>
+        Task<PaginatedResult<ProductBundleInstance>> GetByProductBundleIdAsync(string productBundleId, PaginationRequest paginationRequest);
+        
+        /// <summary>
         /// Updates an existing ProductBundleInstance in storage
         /// </summary>
         /// <param name="instance">The ProductBundleInstance to update</param>
