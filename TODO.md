@@ -1,2 +1,4 @@
-- Colocar execução recorrente a carregar as instâncias e a lançá-las
-- Colocar as atuações sobre as instâncias a serem executadas via Hangfire.
+- O modo como processamos todas as instâncias num job é pouco robusta. Se houver um problema a meio do ciclo, podemos ou entrar num loop infinito ou parar a meio e não assegurar que todas elas são devidamente processadas.
+- Adicionalmente, os plugins não estão devidamente isolados. Se um tiver um problema, pode parar todos os outros e o próprio ProductBundles.
+- Atualizar o README.md
+- Criar documentação adicional, com diagramas de arquitetura que expliquem o Product Bundles.
