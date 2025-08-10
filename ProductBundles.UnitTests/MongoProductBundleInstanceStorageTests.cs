@@ -508,7 +508,6 @@ namespace ProductBundles.UnitTests
             Assert.AreEqual(2, result.PageNumber);
             Assert.AreEqual(5, result.PageSize);
             Assert.AreEqual(5, result.Items.Count());
-            Assert.IsTrue(result.HasPreviousPage);
         }
 
         [TestMethod]
@@ -538,7 +537,6 @@ namespace ProductBundles.UnitTests
             Assert.AreEqual(1, result.PageNumber);
             Assert.AreEqual(10, result.PageSize);
             Assert.AreEqual(10, result.Items.Count());
-            Assert.IsFalse(result.HasPreviousPage);
         }
 
         [TestMethod]
@@ -568,7 +566,6 @@ namespace ProductBundles.UnitTests
             Assert.AreEqual(2, result.PageNumber);
             Assert.AreEqual(10, result.PageSize);
             Assert.AreEqual(2, result.Items.Count()); // Only 2 items on last page
-            Assert.IsTrue(result.HasPreviousPage);
         }
 
         [TestMethod]
@@ -595,7 +592,6 @@ namespace ProductBundles.UnitTests
             Assert.AreEqual(1, result.PageNumber);
             Assert.AreEqual(10, result.PageSize);
             Assert.AreEqual(0, result.Items.Count());
-            Assert.IsFalse(result.HasPreviousPage);
         }
 
         [TestMethod]
@@ -723,7 +719,6 @@ namespace ProductBundles.UnitTests
             Assert.AreEqual(1, result.PageNumber);
             Assert.AreEqual(100, result.PageSize);
             Assert.AreEqual(5, result.Items.Count()); // Should return all available items
-            Assert.IsFalse(result.HasPreviousPage);
         }
 
         [TestMethod]

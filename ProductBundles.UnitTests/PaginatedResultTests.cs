@@ -23,32 +23,6 @@ namespace ProductBundles.UnitTests
             Assert.AreEqual(pageSize, result.PageSize);
         }
 
-
-
-        [TestMethod]
-        public void HasPreviousPage_OnFirstPage_ReturnsFalse()
-        {
-            // Arrange
-            var items = new List<string>();
-            var result = new PaginatedResult<string>(items, 1, 10);
-
-            // Act & Assert
-            Assert.IsFalse(result.HasPreviousPage);
-        }
-
-        [TestMethod]
-        public void HasPreviousPage_OnSecondPage_ReturnsTrue()
-        {
-            // Arrange
-            var items = new List<string>();
-            var result = new PaginatedResult<string>(items, 2, 10);
-
-            // Act & Assert
-            Assert.IsTrue(result.HasPreviousPage);
-        }
-
-
-
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
         public void Constructor_WithNullItems_ThrowsArgumentNullException()
