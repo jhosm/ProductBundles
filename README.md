@@ -1,186 +1,470 @@
-# Product Bundles Plugin System
+# ProductBundles Platform
 
-Sistema de plugins para carregar DLLs via reflection e instanciar classes que implementam a interface `IAmAProductBundle`.
+A comprehensive event-driven plugin platform for .NET that enables dynamic loading, execution, and management of ProductBundle plugins. The platform provides REST APIs, background job processing, scheduled execution, multiple storage backends, and a flexible event-driven architecture.
 
-## Estrutura do Projeto
+## Main Use Cases
 
-- **ProductBundles.Sdk**: Biblioteca SDK contendo:
-  - `IAmAProductBundle`: Interface que define um plugin
-  - `Property`: Classe para definir propriedades dos plugins
-  
-- **ProductBundles.Core**: Biblioteca core contendo:
-  - `ProductBundlesLoader`: Classe responsável por carregar plugins via reflection
-  
-- **ProductBundles.PluginLoader**: Aplicação console que demonstra o uso do sistema de plugins
+The ProductBundles platform is designed for enterprise automation and integration scenarios:
 
-- **ProductBundles.SamplePlugin**: Plugin de exemplo contendo duas implementações de `IAmAProductBundle`
+### **Business Process Automation**
+- **Invoice Processing**: Automatically process incoming invoices, extract data, validate against purchase orders, and route for approval
+- **Customer Onboarding**: Automated workflows that collect customer data, verify information, create accounts, and send welcome materials
+- **Document Management**: Automatically categorize, tag, and archive documents based on content analysis
 
-## Como Usar
+### **System Integration & Data Synchronization**
+- **CRM Synchronization**: Keep customer data synchronized between Salesforce, HubSpot, and internal systems
+- **Inventory Management**: Real-time synchronization between e-commerce platforms, warehouses, and accounting systems
+- **Multi-Platform Publishing**: Automatically publish content to websites, social media, and marketing platforms
 
-### 1. Criar um Plugin
+### **Monitoring & Alerting Systems**
+- **Infrastructure Monitoring**: Check server health, database performance, and application status with scheduled health checks
+- **Business Metrics Tracking**: Monitor KPIs, sales targets, and operational metrics with automated reporting
+- **Security Monitoring**: Detect suspicious activities, failed login attempts, and system vulnerabilities
 
-Para criar um plugin, você precisa:
+### **E-commerce & Retail Operations**
+- **Price Monitoring**: Track competitor prices and automatically adjust pricing strategies
+- **Order Fulfillment**: Coordinate between payment processing, inventory allocation, and shipping providers
+- **Customer Support**: Route support tickets, escalate urgent issues, and provide automated responses
 
-1. Criar uma classe que implemente `IAmAProductBundle`
-2. Implementar todas as propriedades e métodos necessários
-3. Compilar como uma DLL
+## Architecture
 
-Exemplo:
+The ProductBundles platform follows a layered architecture with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     REST API Layer                         │
+│  ProductBundles.Api - HTTP endpoints, Swagger, Hangfire    │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   Service Layer                            │
+│  Background Jobs, Scheduling, Plugin Management            │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     Core Layer                             │
+│  ProductBundles.Core - Plugin Loading, Execution, Storage  │
+└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                   SDK Layer                                │
+│  ProductBundles.Sdk - Interfaces, Models, Contracts       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### **Core Components**
+
+1. **ProductBundles.Sdk**: Plugin development SDK
+   - `IAmAProductBundle`: Main plugin interface
+   - `ProductBundleInstance`: Data model for plugin instances
+   - `Property`: Configuration property definitions
+   - `RecurringBackgroundJob`: Background job scheduling support
+
+2. **ProductBundles.Core**: Core plugin infrastructure
+   - `ProductBundlesLoader`: Dynamic plugin loading via reflection
+   - `PluginManager`: Plugin lifecycle management
+   - `PluginScheduler`: Cron-based scheduling with real-time execution
+   - **Storage**: Multiple backends (File System, MongoDB) with CRUD operations
+   - **Serialization**: JSON-based serialization with configurable options
+
+3. **ProductBundles.Api**: REST API and background processing
+   - **CRUD Endpoints**: Complete REST API for ProductBundle and ProductBundleInstance management
+   - **Background Jobs**: Hangfire integration for async processing
+   - **Swagger Documentation**: OpenAPI specifications with interactive documentation
+
+4. **ProductBundles.PluginLoader**: Console application for testing and demonstration
+
+### **Storage Architecture**
+
+The platform supports multiple storage backends through dependency injection:
+
+```
+IProductBundleInstanceStorage
+├── FileSystemProductBundleInstanceStorage (File-based storage)
+└── MongoProductBundleInstanceStorage (MongoDB-based storage)
+```
+
+### **Background Job Processing**
+
+Powered by Hangfire with multiple job queues:
+- **productbundles**: Plugin execution jobs
+- **scheduled**: Scheduled plugin processing  
+- **maintenance**: Bulk operations and maintenance tasks
+
+## Main Workflows
+
+### Plugin Execution Workflow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as ProductBundles.Api
+    participant Manager as PluginManager
+    participant Loader as ProductBundlesLoader
+    participant Plugin as IAmAProductBundle
+    participant Storage as IProductBundleInstanceStorage
+
+    Client->>API: POST /BackgroundJobs/ExecuteProductBundle
+    API->>Manager: ExecutePlugins(eventName, instance)
+    Manager->>Loader: GetPluginById(id)
+    Loader-->>Manager: plugin
+    Manager->>Plugin: HandleEvent(eventName, instance)
+    Plugin-->>Manager: result instance
+    Manager->>Storage: CreateAsync(result)
+    Storage-->>Manager: saved instance
+    Manager-->>API: execution results
+    API-->>Client: HTTP 200 + job ID
+```
+
+### Scheduled Plugin Workflow
+
+```mermaid
+sequenceDiagram
+    participant Scheduler as PluginScheduler
+    participant Manager as PluginManager
+    participant Plugin as IAmAProductBundle
+    participant Storage as IProductBundleInstanceStorage
+
+    loop Every minute
+        Scheduler->>Scheduler: Check cron schedules
+        alt Schedule matches
+            Scheduler->>Manager: ExecutePlugins(eventName)
+            Manager->>Plugin: HandleEvent(eventName, instance)
+            Plugin-->>Manager: result instance
+            Manager->>Storage: CreateAsync(result)
+            Storage-->>Manager: saved
+        end
+    end
+```
+
+### Plugin Loading Workflow
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Loader as ProductBundlesLoader
+    participant Assembly as .NET Assembly
+    participant Plugin as IAmAProductBundle
+
+    App->>Loader: LoadPlugins()
+    Loader->>Assembly: Load DLL files
+    Assembly-->>Loader: Assembly loaded
+    Loader->>Assembly: GetTypes()
+    Assembly-->>Loader: Type[]
+    loop For each type
+        alt Implements IAmAProductBundle
+            Loader->>Plugin: Activator.CreateInstance()
+            Plugin-->>Loader: plugin instance
+        end
+    end
+    Loader-->>App: List<IAmAProductBundle>
+```
+
+### CRUD API Workflow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as ProductBundles.Api
+    participant Storage as IProductBundleInstanceStorage
+
+    Client->>API: GET /ProductBundleInstances
+    API->>Storage: GetAllAsync()
+    Storage-->>API: instances
+    API-->>Client: HTTP 200 + instances JSON
+
+    Client->>API: POST /ProductBundleInstances
+    API->>Storage: CreateAsync(instance)
+    Storage-->>API: created instance
+    API-->>Client: HTTP 201 + Location header
+
+    Client->>API: PUT /ProductBundleInstances/{id}
+    API->>Storage: UpdateAsync(instance)
+    Storage-->>API: updated instance
+    API-->>Client: HTTP 200 + instance JSON
+
+    Client->>API: DELETE /ProductBundleInstances/{id}
+    API->>Storage: DeleteAsync(id)
+    Storage-->>API: success
+    API-->>Client: HTTP 204
+```
+
+## Setup Instructions
+
+### Prerequisites
+- .NET 8.0 SDK or later
+- Optional: MongoDB (for MongoDB storage backend)
+
+### 1. Clone and Build
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd windsurf-project
+
+# Build all projects
+dotnet build
+
+# Build plugins
+./build-plugins.sh
+
+# Run tests
+./run-tests-with-coverage.sh
+```
+
+### 2. Run the Console Application
+
+```bash
+# Run the console demonstration
+dotnet run --project ProductBundles.PluginLoader
+```
+
+### 3. Run the REST API
+
+```bash
+# Start the API server
+dotnet run --project ProductBundles.Api
+
+# API will be available at:
+# - http://localhost:5077
+# - Swagger UI: http://localhost:5077/swagger
+# - Hangfire Dashboard: http://localhost:5077/hangfire
+```
+
+### 4. Configure Storage Backend
+
+#### File System Storage (Default)
+```csharp
+services.AddProductBundleInstanceServices(
+    Path.Combine(Directory.GetCurrentDirectory(), "storage"));
+```
+
+#### MongoDB Storage
+```csharp
+services.AddProductBundleInstanceMongoStorage(
+    "mongodb://localhost:27017", 
+    "ProductBundles");
+```
+
+### 5. Environment Configuration
+
+Create `appsettings.json` in ProductBundles.Api:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultStorage": "filesystem:./storage",
+    "MongoDB": "mongodb://localhost:27017"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information"
+    }
+  }
+}
+```
+
+## How to Create a Plugin
+
+### 1. Create a New Class Library
+
+```bash
+# Create new plugin project
+dotnet new classlib -n MyCustomPlugin
+cd MyCustomPlugin
+
+# Add reference to ProductBundles.Sdk
+dotnet add reference ../ProductBundles.Sdk/ProductBundles.Sdk.csproj
+```
+
+### 2. Implement the IAmAProductBundle Interface
 
 ```csharp
 using ProductBundles.Sdk;
 
-public class MeuPlugin : IAmAProductBundle
+namespace MyCustomPlugin
 {
-    public string Id => "meuplugin";
-    public string FriendlyName => "Meu Plugin";
-    public string Description => "Descrição do meu plugin";
-    public string Version => "1.0.0";
-
-    public void Initialize()
+    public class MyBusinessPlugin : IAmAProductBundle
     {
-        // Código de inicialização
-    }
+        public string Id => "mybusinessplugin";
+        public string FriendlyName => "My Business Plugin";
+        public string Description => "Handles custom business logic automation";
+        public string Version => "1.0.0";
+        
+        // Define plugin properties
+        public IReadOnlyList<Property> Properties => new[]
+        {
+            new Property("ApiEndpoint", "External API endpoint URL", "https://api.example.com", true),
+            new Property("BatchSize", "Processing batch size", 100, false),
+            new Property("TimeoutSeconds", "Request timeout in seconds", 30, false)
+        };
 
-    public void Execute()
-    {
-        // Funcionalidade principal do plugin
-    }
+        // Define scheduled execution (optional)
+        public string? Schedule => "0 */6 * * *"; // Every 6 hours
 
-    public void Dispose()
-    {
-        // Limpeza de recursos
+        // Define recurring background jobs (optional)
+        public IReadOnlyList<RecurringBackgroundJob> RecurringBackgroundJobs => new[]
+        {
+            new RecurringBackgroundJob(
+                "data-sync", 
+                "*/30 * * * *", // Every 30 minutes
+                "Synchronize data with external systems",
+                new Dictionary<string, object?> { ["eventName"] = "data.sync" }
+            ),
+            new RecurringBackgroundJob(
+                "health-check",
+                "*/5 * * * *", // Every 5 minutes
+                "Check system health and connectivity",
+                new Dictionary<string, object?> { ["eventName"] = "health.check" }
+            )
+        };
+
+        public void Initialize()
+        {
+            Console.WriteLine($"[{FriendlyName}] Initializing plugin...");
+            // Initialize resources, connections, etc.
+        }
+
+        public ProductBundleInstance HandleEvent(string eventName, ProductBundleInstance bundleInstance)
+        {
+            Console.WriteLine($"[{FriendlyName}] Handling event: {eventName}");
+            
+            // Create result instance
+            var result = new ProductBundleInstance(
+                Guid.NewGuid().ToString(),
+                bundleInstance.ProductBundleId,
+                bundleInstance.ProductBundleVersion
+            );
+
+            try
+            {
+                switch (eventName)
+                {
+                    case "data.sync":
+                        HandleDataSync(bundleInstance, result);
+                        break;
+                    case "health.check":
+                        HandleHealthCheck(bundleInstance, result);
+                        break;
+                    case "system.startup":
+                    default:
+                        HandleDefaultExecution(bundleInstance, result);
+                        break;
+                }
+
+                result.Properties["status"] = "success";
+                result.Properties["eventName"] = eventName;
+                result.Properties["executionTime"] = DateTime.UtcNow;
+            }
+            catch (Exception ex)
+            {
+                result.Properties["status"] = "error";
+                result.Properties["error"] = ex.Message;
+                result.Properties["eventName"] = eventName;
+            }
+
+            return result;
+        }
+
+        private void HandleDataSync(ProductBundleInstance input, ProductBundleInstance result)
+        {
+            // Implement data synchronization logic
+            var apiEndpoint = input.Properties["ApiEndpoint"]?.ToString();
+            var batchSize = Convert.ToInt32(input.Properties["BatchSize"] ?? 100);
+            
+            // Your business logic here
+            result.Properties["syncedRecords"] = 150;
+            result.Properties["endpoint"] = apiEndpoint;
+        }
+
+        private void HandleHealthCheck(ProductBundleInstance input, ProductBundleInstance result)
+        {
+            // Implement health check logic
+            result.Properties["systemStatus"] = "healthy";
+            result.Properties["lastCheck"] = DateTime.UtcNow;
+        }
+
+        private void HandleDefaultExecution(ProductBundleInstance input, ProductBundleInstance result)
+        {
+            // Default execution logic
+            result.Properties["defaultExecution"] = true;
+        }
+
+        public void Dispose()
+        {
+            Console.WriteLine($"[{FriendlyName}] Disposing resources...");
+            // Clean up resources
+        }
     }
 }
 ```
 
-### 2. Carregar Plugins
-
-```csharp
-// Criar instância do carregador de plugins
-var pluginLoader = new ProductBundlesLoader("plugins");
-
-// Carregar todos os plugins da pasta
-var plugins = pluginLoader.LoadPlugins();
-
-// Inicializar plugins
-pluginLoader.InitializePlugins();
-
-// Executar plugins
-pluginLoader.ExecutePlugins();
-
-// Limpar recursos
-pluginLoader.DisposePlugins();
-```
-
-### 3. Buscar Plugins
-
-```csharp
-// Buscar por ID
-var plugin = pluginLoader.GetPluginById("meuplugin");
-
-// Buscar por nome
-var plugins = pluginLoader.GetPluginsByName("Meu Plugin");
-```
-
-## Executando o Exemplo
-
-### Compilar e executar:
+### 3. Build and Deploy
 
 ```bash
-# Executar o script de build
-./build-plugins.sh
+# Build your plugin
+dotnet build
 
-# Executar a aplicação
+# Copy to plugins directory
+cp bin/Debug/net8.0/MyCustomPlugin.dll ../plugins/
+
+# Your plugin will be automatically loaded by the platform
+```
+
+### 4. Test Your Plugin
+
+#### Console Testing
+```bash
 dotnet run --project ProductBundles.PluginLoader
 ```
 
-### Ou manualmente:
-
+#### API Testing
 ```bash
-# Build dos projetos
-dotnet build ProductBundles.Sdk
-dotnet build ProductBundles.Core
-dotnet build ProductBundles.SamplePlugin
-dotnet build ProductBundles.PluginLoader
+# Get all plugins
+curl http://localhost:5077/ProductBundles
 
-# Criar pasta plugins e copiar DLLs
-mkdir -p plugins
-cp ProductBundles.SamplePlugin/bin/Debug/net8.0/ProductBundles.SamplePlugin.dll plugins/
-cp ProductBundles.Sdk/bin/Debug/net8.0/ProductBundles.Sdk.dll plugins/
-cp ProductBundles.Core/bin/Debug/net8.0/ProductBundles.Core.dll plugins/
-
-# Executar
-dotnet run --project ProductBundles.PluginLoader
+# Execute your plugin
+curl -X POST http://localhost:5077/BackgroundJobs/ExecuteProductBundle \
+  -H "Content-Type: application/json" \
+  -d '{"pluginId": "mybusinessplugin", "eventName": "data.sync"}'
 ```
 
-## Funcionalidades do ProductBundlesLoader
+### 5. Advanced Plugin Features
 
-- **Carregamento Automático**: Escaneia a pasta "plugins" em busca de DLLs
-- **Reflection**: Usa reflection para encontrar classes que implementam `IAmAProductBundle`
-- **Instanciação Automática**: Cria instâncias das classes de plugin automaticamente
-- **Gerenciamento de Ciclo de Vida**: Suporta Initialize, Execute e Dispose
-- **Busca de Plugins**: Permite encontrar plugins por ID ou nome
-- **Tratamento de Erros**: Lida com erros de carregamento e execução graciosamente
-
-## Requisitos
-
-- .NET 8.0 ou superior
-- Plugins devem referenciar `ProductBundles.Sdk`
-- Aplicações que usam plugins devem referenciar `ProductBundles.Core`
-- Plugins devem implementar `IAmAProductBundle`
-- DLLs devem estar na pasta "plugins"
-
-## Exemplo de Saída
-
+#### Event-Driven Architecture
+Your plugin can handle multiple event types:
+```csharp
+public ProductBundleInstance HandleEvent(string eventName, ProductBundleInstance bundleInstance)
+{
+    return eventName switch
+    {
+        "user.created" => HandleUserCreated(bundleInstance),
+        "order.placed" => HandleOrderPlaced(bundleInstance),
+        "payment.processed" => HandlePaymentProcessed(bundleInstance),
+        _ => HandleDefaultEvent(bundleInstance)
+    };
+}
 ```
-=== Product Bundles Plugin Loader ===
 
-Loading plugins from: /path/to/plugins
-Found 1 DLL files
-Loading assembly: ProductBundles.SamplePlugin.dll
-Found 2 plugin types in ProductBundles.SamplePlugin.dll
-Successfully instantiated plugin: SampleProductBundle
-  - Id: sampleplug
-  - Name: Sample Product Bundle
-  - Version: 1.0.0
-Successfully instantiated plugin: AnotherSamplePlugin
-  - Id: anothersample
-  - Name: Another Sample Plugin
-  - Version: 2.1.0
-Successfully loaded 2 plugins
-
-=== Loaded Plugins ===
-Plugin: Sample Product Bundle
-  ID: sampleplug
-  Description: A sample plugin demonstrating the IAmAProductBundle interface
-  Version: 1.0.0
-
-Plugin: Another Sample Plugin
-  ID: anothersample
-  Description: Another sample plugin to demonstrate multiple plugins in one DLL
-  Version: 2.1.0
-
-=== Initializing Plugins ===
-Initializing plugins...
-[Sample Product Bundle] Initializing...
-Initialized plugin: Sample Product Bundle
-[Another Sample Plugin] Starting initialization sequence...
-[Another Sample Plugin] Checking system requirements...
-[Another Sample Plugin] Initialization complete!
-Initialized plugin: Another Sample Plugin
-
-=== Executing Plugins ===
-Executing plugins...
-[Sample Product Bundle] Executing main functionality...
-[Sample Product Bundle] This is where the plugin would do its work!
-[Sample Product Bundle] Execution completed successfully!
-Executed plugin: Sample Product Bundle
-[Another Sample Plugin] Beginning execution phase...
-[Another Sample Plugin] Processing data...
-[Another Sample Plugin] Processing step 1/3...
-[Another Sample Plugin] Processing step 2/3...
-[Another Sample Plugin] Processing step 3/3...
-[Another Sample Plugin] All tasks completed successfully!
-Executed plugin: Another Sample Plugin
+#### Complex Properties
+```csharp
+public IReadOnlyList<Property> Properties => new[]
+{
+    new Property("DatabaseConnection", "Database connection string", "", true),
+    new Property("RetryPolicy", "Retry configuration", new { maxRetries = 3, delayMs = 1000 }, false),
+    new Property("EmailSettings", "Email configuration", new 
+    { 
+        smtpServer = "smtp.example.com", 
+        port = 587,
+        enableSsl = true 
+    }, false)
+};
 ```
+
+#### Multiple Recurring Jobs
+```csharp
+public IReadOnlyList<RecurringBackgroundJob> RecurringBackgroundJobs => new[]
+{
+    new RecurringBackgroundJob("hourly-report", "0 * * * *", "Generate hourly reports"),
+    new RecurringBackgroundJob("daily-cleanup", "0 2 * * *", "Daily maintenance tasks"),
+    new RecurringBackgroundJob("weekly-backup", "0 1 * * 0", "Weekly data backup")
+};
+```
+
+The ProductBundles platform provides a robust foundation for enterprise automation with comprehensive plugin support, background processing, multiple storage options, and a full REST API.
