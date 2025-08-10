@@ -235,6 +235,259 @@ namespace ProductBundles.UnitTests
             // Assert
             Assert.AreEqual(1, _mockStorage.UpdateAsyncCallCount);
         }
+
+        #region ExecuteRecurringJobAsync Tests
+
+        [TestMethod]
+        public async Task ExecuteRecurringJobAsync_WithValidPluginAndJob_ExecutesSuccessfully()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            plugin.AddRecurringJob("health-check", "*/5 * * * *", "Health check job");
+            _mockPluginLoader.AddPlugin(plugin);
+
+            var instances = new List<ProductBundleInstance>
+            {
+                new ProductBundleInstance("instance1", "test-plugin", "1.0.0"),
+                new ProductBundleInstance("instance2", "test-plugin", "1.0.0")
+            };
+            _mockStorage.AddInstancesForPlugin("test-plugin", instances);
+
+            var parameters = new Dictionary<string, object?> { { "timeout", 30 } };
+
+            // Act
+            await _backgroundService.ExecuteRecurringJobAsync("test-plugin", "health-check", parameters);
+
+            // Assert
+            Assert.AreEqual(2, plugin.HandleEventCallCount); // Called once per instance
+            Assert.AreEqual("recurring.health-check", plugin.LastEventName);
+            Assert.AreEqual(2, _mockStorage.UpdateAsyncCallCount); // Updated both instances
+        }
+
+        [TestMethod]
+        public async Task ExecuteRecurringJobAsync_WithPluginNotFound_LogsWarningAndReturns()
+        {
+            // Arrange
+            var parameters = new Dictionary<string, object?>();
+
+            // Act
+            await _backgroundService.ExecuteRecurringJobAsync("nonexistent-plugin", "TestJob", new Dictionary<string, object?> { ["eventName"] = "test.event" });
+
+            // Assert
+            Assert.AreEqual(0, _mockStorage.GetByProductBundleIdAsyncCallCount);
+        }
+
+        [TestMethod]
+        public async Task ExecuteRecurringJobAsync_WithJobNotFound_LogsWarningAndReturns()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            plugin.AddRecurringJob("existing-job", "*/5 * * * *", "Existing job");
+            _mockPluginLoader.AddPlugin(plugin);
+
+            var parameters = new Dictionary<string, object?>();
+
+            // Act
+            await _backgroundService.ExecuteRecurringJobAsync("test-plugin", "non-existent-job", parameters);
+
+            // Assert
+            Assert.AreEqual(0, _mockStorage.GetByProductBundleIdAsyncCallCount);
+            Assert.AreEqual(0, plugin.HandleEventCallCount);
+        }
+
+        [TestMethod]
+        public async Task ExecuteRecurringJobAsync_WithCustomEventName_UsesCustomEventName()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            plugin.AddRecurringJob("maintenance", "0 2 * * *", "Daily maintenance");
+            _mockPluginLoader.AddPlugin(plugin);
+
+            var instance = new ProductBundleInstance("instance1", "test-plugin", "1.0.0");
+            _mockStorage.AddInstancesForPlugin("test-plugin", new List<ProductBundleInstance> { instance });
+
+            var parameters = new Dictionary<string, object?> { { "eventName", "custom.maintenance" } };
+
+            // Act
+            await _backgroundService.ExecuteRecurringJobAsync("test-plugin", "maintenance", parameters);
+
+            // Assert
+            Assert.AreEqual("custom.maintenance", plugin.LastEventName);
+        }
+
+        [TestMethod]
+        public async Task ExecuteRecurringJobAsync_WithNoInstances_CompletesSuccessfully()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            plugin.AddRecurringJob("cleanup", "0 4 * * *", "Cleanup job");
+            _mockPluginLoader.AddPlugin(plugin);
+
+            // No instances added to storage
+
+            var parameters = new Dictionary<string, object?>();
+
+            // Act
+            await _backgroundService.ExecuteRecurringJobAsync("test-plugin", "cleanup", parameters);
+
+            // Assert
+            Assert.AreEqual(1, _mockStorage.GetByProductBundleIdAsyncCallCount);
+            Assert.AreEqual(0, plugin.HandleEventCallCount);
+        }
+
+        [TestMethod]
+        public async Task ExecuteRecurringJobAsync_WithPaginatedInstances_ProcessesAllPages()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            plugin.AddRecurringJob("batch-process", "0 */6 * * *", "Batch processing");
+            _mockPluginLoader.AddPlugin(plugin);
+
+            // Create enough instances to trigger pagination (more than 1000)
+            var instances = new List<ProductBundleInstance>();
+            for (int i = 0; i < 2500; i++)
+            {
+                instances.Add(new ProductBundleInstance($"instance{i}", "test-plugin", "1.0.0"));
+            }
+            _mockStorage.AddInstancesForPlugin("test-plugin", instances);
+
+            var parameters = new Dictionary<string, object?>();
+
+            // Act
+            await _backgroundService.ExecuteRecurringJobAsync("test-plugin", "batch-process", parameters);
+
+            // Assert
+            Assert.AreEqual(4, _mockStorage.GetByProductBundleIdAsyncCallCount); // 4 calls: 1000, 1000, 500, 0 (triggers break)
+            Assert.AreEqual(2500, plugin.HandleEventCallCount); // All instances processed
+            Assert.AreEqual(2500, _mockStorage.UpdateAsyncCallCount); // All instances updated
+        }
+
+        [TestMethod]
+        public async Task ExecuteRecurringJobAsync_EnrichesInstanceWithJobMetadata()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            plugin.AddRecurringJob("enrichment-test", "0 1 * * *", "Test enrichment");
+            _mockPluginLoader.AddPlugin(plugin);
+
+            var instance = new ProductBundleInstance("instance1", "test-plugin", "1.0.0");
+            instance.Properties["originalProp"] = "originalValue";
+            _mockStorage.AddInstancesForPlugin("test-plugin", new List<ProductBundleInstance> { instance });
+
+            var parameters = new Dictionary<string, object?>
+            {
+                { "batchSize", 100 },
+                { "timeout", 30 }
+            };
+
+            // Act
+            await _backgroundService.ExecuteRecurringJobAsync("test-plugin", "enrichment-test", parameters);
+
+            // Assert
+            var enrichedInstance = plugin.LastHandledInstance;
+            Assert.IsNotNull(enrichedInstance);
+
+            // Verify original properties preserved
+            Assert.AreEqual("originalValue", enrichedInstance.Properties["originalProp"]);
+
+            // Verify job metadata
+            Assert.AreEqual("enrichment-test", enrichedInstance.Properties["_recurringJobName"]);
+            Assert.AreEqual("Test enrichment", enrichedInstance.Properties["_recurringJobDescription"]);
+            Assert.IsTrue(enrichedInstance.Properties.ContainsKey("_executionTimestamp"));
+
+            // Verify job parameters
+            Assert.AreEqual(100, enrichedInstance.Properties["_job_batchSize"]);
+            Assert.AreEqual(30, enrichedInstance.Properties["_job_timeout"]);
+        }
+
+        #endregion
+
+        #region ExecuteProductBundleAsync Tests
+
+        [TestMethod]
+        public async Task ExecuteProductBundleAsync_WithValidPlugin_ExecutesSuccessfully()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            _mockPluginLoader.AddPlugin(plugin);
+
+            var instances = new List<ProductBundleInstance>
+            {
+                new ProductBundleInstance("instance-1", "test-plugin", "1.0.0"),
+                new ProductBundleInstance("instance-2", "test-plugin", "1.0.0")
+            };
+            _mockStorage.AddInstancesForPlugin("test-plugin", instances);
+
+            var parameters = new Dictionary<string, object?>
+            {
+                { "eventName", "manual.execution" },
+                { "batchSize", 10 }
+            };
+
+            // Act
+            await _backgroundService.ExecuteProductBundleAsync("instance-1", "manual.execution");
+
+            // Assert
+            Assert.AreEqual(1, plugin.HandleEventCallCount, "Plugin should handle event for the specified instance");
+            Assert.AreEqual("manual.execution", plugin.LastEventName, "Should use provided event name");
+            Assert.AreEqual(1, _mockStorage.UpdateAsyncCallCount, "Should update the specified instance in storage");
+        }
+
+        [TestMethod]
+        public async Task ExecuteProductBundleAsync_WithPluginNotFound_LogsErrorAndReturns()
+        {
+            // Arrange
+            var parameters = new Dictionary<string, object?>
+            {
+                { "eventName", "manual.execution" }
+            };
+
+            // Act
+            await _backgroundService.ExecuteProductBundleAsync("non-existent-instance", "manual.execution");
+
+            // Assert
+            // Should not throw and should handle gracefully
+            Assert.AreEqual(0, _mockStorage.UpdateAsyncCallCount, "Should not call storage when plugin not found");
+        }
+
+        [TestMethod]
+        public async Task ExecuteProductBundleAsync_WithParameters_EnrichesInstancesWithParameters()
+        {
+            // Arrange
+            var plugin = new MockProductBundle("test-plugin", "1.0.0");
+            _mockPluginLoader.AddPlugin(plugin);
+            
+            var instance1 = new ProductBundleInstance("instance1", "test-plugin", "1.0.0")
+            {
+                Properties = new Dictionary<string, object?> { ["existing"] = "value" }
+            };
+            var instance2 = new ProductBundleInstance("instance2", "test-plugin", "1.0.0");
+            
+            _mockStorage.AddInstancesForPlugin("test-plugin", new List<ProductBundleInstance> { instance1, instance2 });
+            
+            var parameters = new Dictionary<string, object?>
+            {
+                ["eventName"] = "custom.event",
+                ["batchSize"] = 10,
+                ["timeout"] = 30
+            };
+            
+            // Act
+            await _backgroundService.ExecuteProductBundleAsync("instance1", "custom.event");
+            
+            // Assert
+            Assert.AreEqual(1, plugin.HandleEventCallCount, "Should handle event for the specified instance");
+            Assert.AreEqual(1, _mockStorage.UpdateAsyncCallCount, "Should update the specified instance");
+            
+            // Verify the last handled instance
+            var lastHandledInstance = plugin.LastHandledInstance;
+            Assert.IsNotNull(lastHandledInstance, "Should have processed an instance");
+            Assert.AreEqual("custom.event", plugin.LastEventName, "Should have correct event name");
+            Assert.AreEqual("instance1", lastHandledInstance.Id, "Should have processed the correct instance");
+        }
+
+        #endregion
+
     }
 
     /// <summary>
@@ -287,17 +540,23 @@ namespace ProductBundles.UnitTests
     /// </summary>
     public class MockProductBundle : IAmAProductBundle
     {
+        private readonly List<RecurringBackgroundJob> _recurringJobs = new List<RecurringBackgroundJob>();
+
         public string Id { get; }
         public string FriendlyName { get; }
         public string Description { get; }
         public string Version { get; }
         public IReadOnlyList<Property> Properties { get; } = new List<Property>();
-        public IReadOnlyList<RecurringBackgroundJob> RecurringBackgroundJobs { get; } = new List<RecurringBackgroundJob>();
+        public IReadOnlyList<RecurringBackgroundJob> RecurringBackgroundJobs => _recurringJobs.AsReadOnly();
         public string? Schedule { get; } = null;
 
         public int HandleEventCallCount { get; private set; }
         public string? LastEventName { get; private set; }
         public ProductBundleInstance? LastHandledInstance { get; private set; }
+        
+        public int UpgradeCallCount { get; private set; }
+        public ProductBundleInstance? LastUpgradedInstance { get; private set; }
+        public bool ShouldFailUpgrade { get; set; } = false;
 
         public MockProductBundle(string id, string version)
         {
@@ -305,6 +564,20 @@ namespace ProductBundles.UnitTests
             FriendlyName = $"Mock {id}";
             Description = $"Mock plugin {id}";
             Version = version;
+        }
+
+        public void AddRecurringJob(string name, string cronSchedule, string description)
+        {
+            var parameters = new Dictionary<string, object?>
+            {
+                { "eventName", $"recurring.{name}" }
+            };
+            _recurringJobs.Add(new RecurringBackgroundJob(name, cronSchedule, description, parameters));
+        }
+
+        public void ClearRecurringJobs()
+        {
+            _recurringJobs.Clear();
         }
 
         public void Initialize()
@@ -327,7 +600,33 @@ namespace ProductBundles.UnitTests
 
         public ProductBundleInstance UpgradeProductBundleInstance(ProductBundleInstance bundleInstance)
         {
-            return bundleInstance; // Simple implementation for testing
+            UpgradeCallCount++;
+            
+            if (ShouldFailUpgrade)
+            {
+                throw new InvalidOperationException("Simulated upgrade failure");
+            }
+
+            // Create upgraded instance with current plugin version
+            var upgradedInstance = new ProductBundleInstance(
+                bundleInstance.Id, // Preserve original ID
+                Id, // Use current plugin ID
+                Version // Use current plugin version
+            );
+
+            // Copy all original properties
+            foreach (var prop in bundleInstance.Properties)
+            {
+                upgradedInstance.Properties[prop.Key] = prop.Value;
+            }
+
+            // Add upgrade metadata
+            upgradedInstance.Properties["_upgraded"] = true;
+            upgradedInstance.Properties["_originalVersion"] = bundleInstance.ProductBundleVersion;
+            upgradedInstance.Properties["_upgradeTimestamp"] = DateTime.UtcNow;
+
+            LastUpgradedInstance = upgradedInstance;
+            return upgradedInstance;
         }
 
         public void Dispose()
