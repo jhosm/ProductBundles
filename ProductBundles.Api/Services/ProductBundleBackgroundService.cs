@@ -52,33 +52,64 @@ public class ProductBundleBackgroundService
                 // Get the event name from parameters (or use a default)
                 var eventName = parameters.GetValueOrDefault("eventName")?.ToString() ?? $"recurring.{recurringJobName}";
 
-                // Load ProductBundleInstance objects for this specific ProductBundle from storage
-                var paginationRequest = new PaginationRequest(pageNumber: 1, pageSize: 1000);
-                var paginatedResult = await _instanceStorage.GetByProductBundleIdAsync(productBundleId, paginationRequest);
-                var allInstances = paginatedResult.Items;
-                var processedCount = 0;
-                var updatedCount = 0;
+                // Process all ProductBundleInstance objects in batches
+                const int batchSize = 1000;
+                var currentPage = 1;
+                var totalProcessedCount = 0;
+                var totalUpdatedCount = 0;
+                var batchNumber = 1;
 
-                foreach (var instance in allInstances)
+                _logger.LogInformation("Starting recurring job '{RecurringJobName}' for ProductBundle '{ProductBundleId}' with batch size {BatchSize}", 
+                    recurringJobName, productBundleId, batchSize);
+
+                while (true)
                 {
-                    var success = await ProcessInstanceSafelyAsync(instance, "recurring job processing", async (inst) =>
-                    {
-                        // Add recurring job metadata to the instance properties
-                        var instanceCopy = CreateInstanceCopyWithJobMetadata(inst, parameters, recurringJobName, recurringJob);
-                        
-                        // Execute the plugin's HandleEvent method
-                        var result = plugin.HandleEvent(eventName, instanceCopy);
-                        
-                        // Update the instance in storage
-                        return await UpdateInstanceInStorageAsync(result, inst.Id, $"recurring job '{recurringJobName}'");
-                    });
+                    var paginationRequest = new PaginationRequest(pageNumber: currentPage, pageSize: batchSize);
+                    var paginatedResult = await _instanceStorage.GetByProductBundleIdAsync(productBundleId, paginationRequest);
+                    var batchInstances = paginatedResult.Items;
+                    var batchProcessedCount = 0;
+                    var batchUpdatedCount = 0;
 
-                    processedCount++;
-                    if (success) updatedCount++;
+                    if (!batchInstances.Any())
+                    {
+                        _logger.LogInformation("No more instances found for ProductBundle '{ProductBundleId}' at page {PageNumber}", 
+                            productBundleId, currentPage);
+                        break;
+                    }
+
+                    _logger.LogInformation("Processing batch {BatchNumber} (page {PageNumber}) with {InstanceCount} instances for recurring job '{RecurringJobName}'", 
+                        batchNumber, currentPage, batchInstances.Count(), recurringJobName);
+
+                    foreach (var instance in batchInstances)
+                    {
+                        var success = await ProcessInstanceSafelyAsync(instance, "recurring job processing", async (inst) =>
+                        {
+                            // Add recurring job metadata to the instance properties
+                            var instanceCopy = CreateInstanceCopyWithJobMetadata(inst, parameters, recurringJobName, recurringJob);
+                            
+                            // Execute the plugin's HandleEvent method
+                            var result = plugin.HandleEvent(eventName, instanceCopy);
+                            
+                            // Update the instance in storage
+                            return await UpdateInstanceInStorageAsync(result, inst.Id, $"recurring job '{recurringJobName}'");
+                        });
+
+                        batchProcessedCount++;
+                        if (success) batchUpdatedCount++;
+                    }
+
+                    totalProcessedCount += batchProcessedCount;
+                    totalUpdatedCount += batchUpdatedCount;
+
+                    _logger.LogInformation("Completed batch {BatchNumber} for recurring job '{RecurringJobName}'. Batch processed {BatchProcessedCount} instances, updated {BatchUpdatedCount} instances. Total so far: {TotalProcessedCount} processed, {TotalUpdatedCount} updated", 
+                        batchNumber, recurringJobName, batchProcessedCount, batchUpdatedCount, totalProcessedCount, totalUpdatedCount);
+
+                    currentPage++;
+                    batchNumber++;
                 }
 
-                _logger.LogInformation("Completed recurring job '{RecurringJobName}' for ProductBundle '{ProductBundleId}'. Processed {ProcessedCount} instances, updated {UpdatedCount} instances", 
-                    recurringJobName, productBundleId, processedCount, updatedCount);
+                _logger.LogInformation("Completed recurring job '{RecurringJobName}' for ProductBundle '{ProductBundleId}'. Total processed {ProcessedCount} instances across {BatchCount} batches, updated {UpdatedCount} instances", 
+                    recurringJobName, productBundleId, totalProcessedCount, batchNumber, totalUpdatedCount);
             });
     }
 
