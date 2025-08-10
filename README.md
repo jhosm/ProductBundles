@@ -71,6 +71,133 @@ The ProductBundles platform follows a layered architecture with clear separation
 
 4. **ProductBundles.PluginLoader**: Console application for testing and demonstration
 
+### **Entity Source System**
+
+The Entity Source system provides event-driven integration capabilities, allowing external systems to trigger ProductBundle processing based on entity lifecycle events (create, update, delete).
+
+#### **Architecture Overview**
+
+```
+┌─────────────────┐    Events    ┌──────────────────────┐    Processes    ┌─────────────────────┐
+│  Entity Sources │ ──────────→  │ EntitySourceManager  │ ──────────────→ │ ProductBundle       │
+│ (CustomerSource)│              │                      │                 │ Plugins             │
+└─────────────────┘              └──────────────────────┘                 └─────────────────────┘
+        │                                    │                                        │
+        │ Generate                          │ Dispatch                              │ HandleEvent()
+        ▼                                    ▼                                        ▼
+┌─────────────────┐              ┌──────────────────────┐                 ┌─────────────────────┐
+│EntityChangeEvent│              │ProductBundleBackground│                │ Enriched Instance   │
+│     Args        │              │     Service          │                 │ + Entity Data       │
+└─────────────────┘              └──────────────────────┘                 └─────────────────────┘
+```
+
+#### **Core Components**
+
+**1. IEntitySource Interface**
+- Base interface for all entity sources
+- Properties: `Id`, `FriendlyName`, `IsActive`
+- Events: `EntityChanged` - fired when entities change
+- Methods: `StartAsync()`, `StopAsync()` - lifecycle management
+
+**2. EntitySourceManager**
+- Manages multiple entity sources
+- Orchestrates event dispatch to ProductBundle processing
+- Thread-safe event handling with comprehensive logging
+- Integrates with `IBackgroundJobProcessor` for async processing
+
+**3. EntityChangeEventArgs**
+- Standard event data structure for all entity changes
+- Properties: `EntityType`, `EntityId`, `EventType`, `Timestamp`
+- `EntityData`: Dictionary of entity property data
+- `Metadata`: Additional event metadata
+
+**4. CustomerEventSource (Example Implementation)**
+- Example entity source for customer lifecycle events
+- Simulation methods: `SimulateCustomerCreated()`, `SimulateCustomerUpdated()`, `SimulateCustomerDeleted()`
+- Configurable source ID and comprehensive logging
+
+#### **Event Processing Flow**
+
+1. **Entity Change Occurs**: External system triggers entity source
+2. **Event Generation**: Entity source creates `EntityChangeEventArgs`
+3. **Event Dispatch**: `EntitySourceManager` receives and dispatches event
+4. **Plugin Processing**: `ProductBundleBackgroundService.ProcessEntityEventAsync()` processes all ProductBundle instances
+5. **Data Enrichment**: Each instance receives enriched data with entity information:
+   - `_entityType`: Type of entity (e.g., "Customer")
+   - `_entityId`: Unique identifier of changed entity
+   - `_eventType`: Event type ("Created", "Updated", "Deleted")
+   - `_eventTimestamp`: When the change occurred
+   - `_entity_{key}`: Entity property data with prefix
+   - `_meta_{key}`: Event metadata with prefix
+
+#### **Plugin Integration**
+
+ProductBundle plugins receive entity events through the `HandleEvent()` method:
+
+```csharp
+public ProductBundleInstance HandleEvent(string eventName, ProductBundleInstance bundleInstance)
+{
+    // eventName format: "entity.{EventType}" (e.g., "entity.Created")
+    
+    // Access entity data from enriched instance
+    var entityType = bundleInstance.Properties["_entityType"]?.ToString();
+    var entityId = bundleInstance.Properties["_entityId"]?.ToString();
+    var eventType = bundleInstance.Properties["_eventType"]?.ToString();
+    
+    // Access entity properties
+    var customerName = bundleInstance.Properties["_entity_Name"]?.ToString();
+    var customerEmail = bundleInstance.Properties["_entity_Email"]?.ToString();
+    
+    // Process the event and return updated instance
+    var result = new ProductBundleInstance(/*...*/);
+    result.Properties["processedEntityEvent"] = true;
+    result.Properties["processedAt"] = DateTime.UtcNow;
+    
+    return result;
+}
+```
+
+#### **Configuration & Usage**
+
+**1. Register Entity Sources**
+```csharp
+var entitySourceManager = new EntitySourceManager(logger);
+var customerSource = new CustomerEventSource(logger, "customer-source-1");
+
+await entitySourceManager.RegisterSourceAsync(customerSource);
+await entitySourceManager.StartAllSourcesAsync();
+```
+
+**2. Trigger Events Programmatically**
+```csharp
+// Simulate customer creation
+await customerSource.SimulateCustomerCreated("CUST001", new Dictionary<string, object?>
+{
+    ["Name"] = "John Doe",
+    ["Email"] = "john.doe@example.com",
+    ["Status"] = "Active"
+});
+```
+
+**3. Integration with Background Processing**
+```csharp
+// Entity source manager automatically dispatches to background service
+entitySourceManager.EntityEventProcessed += async (sender, args) =>
+{
+    await backgroundJobProcessor.ProcessEntityEventAsync(args);
+};
+```
+
+#### **Benefits**
+
+- **Event-Driven Architecture**: Reactive processing based on real-world entity changes
+- **Scalable Processing**: Handles large numbers of ProductBundle instances with pagination
+- **Data Enrichment**: Plugins receive both their instance data and entity change context
+- **Error Isolation**: Individual plugin failures don't affect other plugins
+- **Comprehensive Logging**: Full audit trail of entity events and processing
+- **Extensible Design**: Easy to add new entity types and sources
+- **Async Processing**: Non-blocking event processing for high throughput
+
 ### **Storage Architecture**
 
 The platform supports multiple storage backends through dependency injection:

@@ -16,15 +16,11 @@ namespace ProductBundles.UnitTests
         private ILogger<MongoProductBundleInstanceStorage>? _logger;
 
         [TestInitialize]
-        public void Setup()
+        public async Task Setup()
         {
             var loggerFactory = LoggerFactory.Create(builder => { });
             _logger = loggerFactory.CreateLogger<MongoProductBundleInstanceStorage>();
-        }
-
-        [TestInitialize]
-        public async Task TestInitialize()
-        {
+            
             // Clean up any existing test data before each test
             await CleanupTestData();
         }

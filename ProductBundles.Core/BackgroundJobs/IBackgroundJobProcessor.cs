@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ProductBundles.Sdk;
 
 namespace ProductBundles.Core.BackgroundJobs;
 
@@ -29,4 +30,10 @@ public interface IBackgroundJobProcessor
     /// </summary>
     /// <param name="productBundleId">The ProductBundle ID to upgrade instances for</param>
     Task UpgradeProductBundleInstancesAsync(string productBundleId);
+
+    /// <summary>
+    /// Process an entity change event by executing all loaded ProductBundles with enriched instance data
+    /// </summary>
+    /// <param name="entityChangeEvent">The entity change event to process</param>
+    Task ProcessEntityEventAsync(EntityChangeEventArgs entityChangeEvent);
 }

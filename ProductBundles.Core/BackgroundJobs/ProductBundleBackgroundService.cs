@@ -343,4 +343,136 @@ public class ProductBundleBackgroundService : IBackgroundJobProcessor
     }
 
     #endregion
+
+    #region Entity Event Processing
+
+    /// <summary>
+    /// Process an entity change event by executing all loaded ProductBundles with enriched instance data
+    /// </summary>
+    /// <param name="entityChangeEvent">The entity change event to process</param>
+    public async Task ProcessEntityEventAsync(EntityChangeEventArgs entityChangeEvent)
+    {
+        if (entityChangeEvent == null)
+            throw new ArgumentNullException(nameof(entityChangeEvent));
+
+        var eventName = $"entity.{entityChangeEvent.EventType}";
+        _logger.LogInformation("Processing entity event: {EntityType} {EntityId} - {EventType}", 
+            entityChangeEvent.EntityType, entityChangeEvent.EntityId, entityChangeEvent.EventType);
+
+        var loadedPlugins = _pluginLoader.LoadedPlugins;
+        if (loadedPlugins.Count == 0)
+        {
+            _logger.LogWarning("No ProductBundle plugins loaded for entity event processing");
+            return;
+        }
+
+        foreach (var plugin in loadedPlugins)
+        {
+            try
+            {
+                _logger.LogDebug("Processing entity event for ProductBundle: {PluginId}", plugin.Id);
+                
+                // Get all instances for this ProductBundle with pagination
+                var pageNumber = 1;
+                const int pageSize = 1000; // Using same batch size as other operations
+                
+                while (true)
+                {
+                    var paginationRequest = new PaginationRequest(pageNumber, pageSize);
+                    var paginatedResult = await _instanceStorage.GetByProductBundleIdAsync(plugin.Id, paginationRequest);
+                    
+                    if (paginatedResult.Items.Count() == 0)
+                    {
+                        _logger.LogDebug("No more instances found for ProductBundle {PluginId} (page {Page})", 
+                            plugin.Id, pageNumber);
+                        break;
+                    }
+                    
+                    _logger.LogDebug("Processing {Count} instances for ProductBundle {PluginId} (page {Page})", 
+                        paginatedResult.Items.Count(), plugin.Id, pageNumber);
+                        
+                    // Process each instance with entity event data
+                    foreach (var instance in paginatedResult.Items)
+                    {
+                        await SafelyProcessInstanceWithEntityEvent(plugin, instance, entityChangeEvent, eventName);
+                    }
+                    
+                    pageNumber++;
+                }
+                
+                _logger.LogDebug("Completed entity event processing for ProductBundle: {PluginId}", plugin.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing entity event for ProductBundle {PluginId}: {Error}", 
+                    plugin.Id, ex.Message);
+            }
+        }
+
+        _logger.LogInformation("Entity event processing completed: {EntityType} {EntityId}", 
+            entityChangeEvent.EntityType, entityChangeEvent.EntityId);
+    }
+
+    /// <summary>
+    /// Safely process a single ProductBundle instance with entity event data
+    /// </summary>
+    private async Task SafelyProcessInstanceWithEntityEvent(
+        IAmAProductBundle plugin, 
+        ProductBundleInstance instance, 
+        EntityChangeEventArgs entityChangeEvent,
+        string eventName)
+    {
+        await ProcessInstanceSafelyAsync(instance, "entity event processing", async (inst) =>
+        {
+            _logger.LogDebug("Processing instance {InstanceId} with entity event {EventType} for ProductBundle {PluginId}", 
+                inst.Id, entityChangeEvent.EventType, plugin.Id);
+            
+            // Create enriched copy with entity event metadata
+            var enrichedInstance = CreateInstanceCopyWithEntityEventMetadata(inst, entityChangeEvent);
+            
+            // Execute the plugin with the enriched instance
+            var result = plugin.HandleEvent(eventName, enrichedInstance);
+            
+            // Update the result instance in storage
+            return await UpdateInstanceInStorageAsync(result, inst.Id, "entity event processing");
+        });
+    }
+
+    /// <summary>
+    /// Create a copy of the instance enriched with entity event metadata
+    /// </summary>
+    private ProductBundleInstance CreateInstanceCopyWithEntityEventMetadata(
+        ProductBundleInstance instance, 
+        EntityChangeEventArgs entityChangeEvent)
+    {
+        var copy = new ProductBundleInstance(instance.Id, instance.ProductBundleId, instance.ProductBundleVersion);
+        
+        // Copy all original properties
+        foreach (var prop in instance.Properties)
+        {
+            copy.Properties[prop.Key] = prop.Value;
+        }
+        
+        // Add entity event metadata
+        copy.Properties["_entityType"] = entityChangeEvent.EntityType;
+        copy.Properties["_entityId"] = entityChangeEvent.EntityId;
+        copy.Properties["_eventType"] = entityChangeEvent.EventType;
+        copy.Properties["_eventTimestamp"] = entityChangeEvent.Timestamp;
+        
+        // Add entity data with prefix to avoid conflicts
+        foreach (var data in entityChangeEvent.EntityData)
+        {
+            copy.Properties[$"_entity_{data.Key}"] = data.Value;
+        }
+        
+        // Add event metadata with prefix
+        foreach (var meta in entityChangeEvent.Metadata)
+        {
+            copy.Properties[$"_meta_{meta.Key}"] = meta.Value;
+        }
+        
+        return copy;
+    }
+
+    #endregion
 }
