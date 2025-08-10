@@ -1,4 +1,5 @@
 using ProductBundles.Core.BackgroundJobs;
+using ProductBundles.Sdk;
 
 namespace ProductBundles.Core.EntitySources
 {

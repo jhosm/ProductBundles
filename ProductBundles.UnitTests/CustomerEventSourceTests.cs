@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ProductBundles.Core.EntitySources;
+using ProductBundles.SamplePlugin;
 using ProductBundles.Sdk;
 
 namespace ProductBundles.UnitTests

@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
 using ProductBundles.Sdk;
-using ProductBundles.Core.BackgroundJobs;
 
-namespace ProductBundles.Core.EntitySources
+namespace ProductBundles.SamplePlugin
 {
     /// <summary>
     /// Sample entity source that monitors customer-related events.

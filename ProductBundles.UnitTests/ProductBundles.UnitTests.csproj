@@ -29,6 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ProductBundles.Core\ProductBundles.Core.csproj" />
     <ProjectReference Include="..\ProductBundles.Sdk\ProductBundles.Sdk.csproj" />
+    <ProjectReference Include="..\ProductBundles.SamplePlugin\ProductBundles.SamplePlugin.csproj" />
   </ItemGroup>
 
 </Project>

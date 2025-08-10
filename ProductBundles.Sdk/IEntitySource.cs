@@ -1,8 +1,4 @@
-using ProductBundles.Core.BackgroundJobs;
-
-using ProductBundles.Sdk;
-
-namespace ProductBundles.Core.EntitySources
+namespace ProductBundles.Sdk
 {
     /// <summary>
     /// Interface for entity sources that can trigger events for ProductBundle plugins.

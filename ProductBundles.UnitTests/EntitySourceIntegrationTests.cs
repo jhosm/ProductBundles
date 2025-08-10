@@ -4,6 +4,7 @@ using ProductBundles.Core;
 using ProductBundles.Core.BackgroundJobs;
 using ProductBundles.Core.EntitySources;
 using ProductBundles.Core.Storage;
+using ProductBundles.SamplePlugin;
 using ProductBundles.Sdk;
 using System;
 using System.Collections.Generic;
