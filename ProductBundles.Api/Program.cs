@@ -1,6 +1,7 @@
 using ProductBundles.Api.Models;
 using ProductBundles.Api.Services;
 using ProductBundles.Core;
+using ProductBundles.Core.BackgroundJobs;
 using ProductBundles.Core.Extensions;
 using ProductBundles.Core.Storage;
 using ProductBundles.Sdk;
@@ -42,8 +43,9 @@ builder.Services.AddHangfireServer(options =>
     options.Queues = new[] { "productbundles", "recurring", "default" };
 });
 
-// Register background service for managing ProductBundle recurring jobs
-builder.Services.AddScoped<ProductBundleBackgroundService>();
+// Register background job processing services
+builder.Services.AddScoped<IBackgroundJobProcessor, ProductBundleBackgroundService>();
+builder.Services.AddScoped<HangfireBackgroundJobWrapper>();
 builder.Services.AddScoped<HangfireRecurringJobManager>();
 
 var app = builder.Build();

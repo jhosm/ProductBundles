@@ -87,9 +87,9 @@ public class HangfireRecurringJobManager
                 // Create unique job ID: productBundleId + recurringJobName (as requested)
                 var hangfireJobId = $"{plugin.Id}.{recurringJob.Name}";
 
-                // Create the job expression for async method
-                Expression<Func<ProductBundleBackgroundService, Task>> jobExpression = service => 
-                    service.ExecuteRecurringJobAsync(plugin.Id, recurringJob.Name, recurringJob.Parameters ?? new Dictionary<string, object?>());
+                // Create the job expression for async method using the Hangfire wrapper
+                Expression<Func<HangfireBackgroundJobWrapper, Task>> jobExpression = wrapper => 
+                    wrapper.ExecuteRecurringJobAsync(plugin.Id, recurringJob.Name, recurringJob.Parameters ?? new Dictionary<string, object?>());
 
                 // Register the recurring job with Hangfire using the non-obsolete overload
                 _recurringJobManager.AddOrUpdate(

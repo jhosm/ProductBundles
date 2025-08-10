@@ -1,14 +1,19 @@
 using ProductBundles.Core;
+using ProductBundles.Core.BackgroundJobs;
 using ProductBundles.Core.Storage;
 using ProductBundles.Sdk;
-using Hangfire;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace ProductBundles.Api.Services;
+namespace ProductBundles.Core.BackgroundJobs;
 
 /// <summary>
-/// Background service for executing ProductBundle operations via Hangfire
+/// Background service for executing ProductBundle operations
 /// </summary>
-public class ProductBundleBackgroundService
+public class ProductBundleBackgroundService : IBackgroundJobProcessor
 {
     private readonly ProductBundlesLoader _pluginLoader;
     private readonly IProductBundleInstanceStorage _instanceStorage;
@@ -30,7 +35,6 @@ public class ProductBundleBackgroundService
     /// <param name="productBundleId">The ID of the ProductBundle to execute</param>
     /// <param name="recurringJobName">The name of the recurring job being executed</param>
     /// <param name="parameters">Additional parameters for the job execution</param>
-    [Hangfire.Queue("recurring")]
     public async Task ExecuteRecurringJobAsync(string productBundleId, string recurringJobName, Dictionary<string, object?> parameters)
     {
         await ExecuteOperationAsync(
@@ -118,7 +122,6 @@ public class ProductBundleBackgroundService
     /// </summary>
     /// <param name="instanceId">The ID of the ProductBundleInstance to process</param>
     /// <param name="eventName">The event name to trigger</param>
-    [Hangfire.Queue("productbundles")]
     public async Task ExecuteProductBundleAsync(string instanceId, string eventName = "background.execute")
     {
         _logger.LogInformation("Executing ProductBundle for instance '{InstanceId}' with event '{EventName}'", 
@@ -160,7 +163,6 @@ public class ProductBundleBackgroundService
     /// Bulk upgrade all instances of a specific ProductBundle
     /// </summary>
     /// <param name="productBundleId">The ProductBundle ID to upgrade instances for</param>
-    [Hangfire.Queue("productbundles")]
     public async Task UpgradeProductBundleInstancesAsync(string productBundleId)
     {
         await ExecuteOperationAsync(
