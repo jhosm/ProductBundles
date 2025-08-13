@@ -8,7 +8,7 @@ namespace ProductBundles.SamplePlugin
     /// In a real implementation, this would integrate with a customer management system,
     /// database change logs, message queues, or other external systems.
     /// </summary>
-    public class CustomerEventSource : IEntitySource
+    public class CustomerEventSource : IAmAnEntitySource
     {
         private readonly ILogger<CustomerEventSource> _logger;
         private readonly Timer? _simulationTimer;

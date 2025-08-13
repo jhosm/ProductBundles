@@ -93,7 +93,7 @@ The Entity Source system provides event-driven integration capabilities, allowin
 
 #### **Core Components**
 
-**1. IEntitySource Interface**
+**1. IAmAnEntitySource Interface**
 - Base interface for all entity sources
 - Properties: `Id`, `FriendlyName`, `IsActive`
 - Events: `EntityChanged` - fired when entities change

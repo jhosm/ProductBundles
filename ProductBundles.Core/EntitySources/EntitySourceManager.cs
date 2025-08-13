@@ -11,7 +11,7 @@ namespace ProductBundles.Core.EntitySources
     /// </summary>
     public class EntitySourceManager : IEntitySourceManager, IDisposable
     {
-        private readonly ConcurrentDictionary<string, IEntitySource> _entitySources = new();
+        private readonly ConcurrentDictionary<string, IAmAnEntitySource> _entitySources = new();
         private readonly ConcurrentDictionary<string, IBackgroundJobProcessor> _processors = new();
         private readonly ILogger<EntitySourceManager> _logger;
         private readonly object _lockObject = new();
@@ -20,7 +20,7 @@ namespace ProductBundles.Core.EntitySources
         /// <summary>
         /// Gets the collection of registered entity sources
         /// </summary>
-        public IReadOnlyDictionary<string, IEntitySource> EntitySources => _entitySources;
+        public IReadOnlyDictionary<string, IAmAnEntitySource> EntitySources => _entitySources;
 
         /// <summary>
         /// Gets the collection of registered background job processors
@@ -41,7 +41,7 @@ namespace ProductBundles.Core.EntitySources
         /// </summary>
         /// <param name="entitySource">The entity source to register</param>
         /// <returns>A task that represents the registration operation</returns>
-        public async Task RegisterEntitySourceAsync(IEntitySource entitySource)
+        public async Task RegisterEntitySourceAsync(IAmAnEntitySource entitySource)
         {
             if (entitySource == null)
                 throw new ArgumentNullException(nameof(entitySource));
@@ -187,7 +187,7 @@ namespace ProductBundles.Core.EntitySources
             if (_disposed || e == null)
                 return;
 
-            var sourceId = (sender as IEntitySource)?.Id ?? "Unknown";
+            var sourceId = (sender as IAmAnEntitySource)?.Id ?? "Unknown";
             
             _logger.LogDebug("Received entity change event from source '{SourceId}': {EntityType}.{EntityId} -> {EventType}",
                 sourceId, e.EntityType, e.EntityId, e.EventType);

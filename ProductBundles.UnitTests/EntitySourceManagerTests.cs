@@ -343,7 +343,7 @@ namespace ProductBundles.UnitTests
     }
 
     // Mock entity source for testing
-    public class MockEntitySource : IEntitySource
+    public class MockEntitySource : IAmAnEntitySource
     {
         public string Id { get; }
         public string FriendlyName { get; }

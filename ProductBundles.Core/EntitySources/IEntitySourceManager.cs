@@ -9,9 +9,9 @@ namespace ProductBundles.Core.EntitySources
     public interface IEntitySourceManager
     {
         /// <summary>
-        /// Gets the collection of registered entity sources
+        /// Gets all registered entity sources by their IDs
         /// </summary>
-        IReadOnlyDictionary<string, IEntitySource> EntitySources { get; }
+        IReadOnlyDictionary<string, IAmAnEntitySource> EntitySources { get; }
 
         /// <summary>
         /// Gets the collection of registered background job processors
@@ -19,11 +19,11 @@ namespace ProductBundles.Core.EntitySources
         IReadOnlyDictionary<string, IBackgroundJobProcessor> Processors { get; }
 
         /// <summary>
-        /// Registers an entity source with the manager
+        /// Registers an entity source for monitoring
         /// </summary>
         /// <param name="entitySource">The entity source to register</param>
         /// <returns>A task that represents the registration operation</returns>
-        Task RegisterEntitySourceAsync(IEntitySource entitySource);
+        Task RegisterEntitySourceAsync(IAmAnEntitySource entitySource);
 
         /// <summary>
         /// Unregisters an entity source from the manager

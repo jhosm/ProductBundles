@@ -5,7 +5,7 @@ namespace ProductBundles.Sdk
     /// Entity sources monitor specific types of entities (e.g., customers, orders) and 
     /// notify the system when relevant changes occur.
     /// </summary>
-    public interface IEntitySource
+    public interface IAmAnEntitySource
     {
         /// <summary>
         /// Gets the unique identifier for this entity source
