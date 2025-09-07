@@ -190,6 +190,47 @@ namespace ProductBundles.Core.Extensions
         }
 
         /// <summary>
+        /// Adds ProductBundle SQL Server storage services to the DI container
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="connectionString">The SQL Server connection string</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddProductBundleInstanceSqlServerStorage(
+            this IServiceCollection services,
+            string connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("Connection string cannot be null or empty", nameof(connectionString));
+
+            // Register the storage implementation
+            services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
+            {
+                var logger = provider.GetService<ILogger<SqlServerProductBundleInstanceStorage>>();
+                return new SqlServerProductBundleInstanceStorage(connectionString, logger);
+            });
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds all ProductBundle services with SQL Server storage to the DI container
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="connectionString">The SQL Server connection string</param>
+        /// <param name="configureJsonOptions">Optional action to configure JSON serialization options</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddProductBundleInstanceSqlServerServices(
+            this IServiceCollection services,
+            string connectionString,
+            Action<JsonSerializerOptions>? configureJsonOptions = null)
+        {
+            services.AddProductBundleInstanceSerialization(configureJsonOptions);
+            services.AddProductBundleInstanceSqlServerStorage(connectionString);
+            
+            return services;
+        }
+
+        /// <summary>
         /// Adds plugin resilience services to the DI container
         /// </summary>
         /// <param name="services">The service collection</param>
