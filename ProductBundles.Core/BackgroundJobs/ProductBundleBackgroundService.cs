@@ -1,5 +1,6 @@
 using ProductBundles.Core;
 using ProductBundles.Core.BackgroundJobs;
+using ProductBundles.Core.Resilience;
 using ProductBundles.Core.Storage;
 using ProductBundles.Sdk;
 using Microsoft.Extensions.Logging;
@@ -17,15 +18,18 @@ public class ProductBundleBackgroundService : IBackgroundJobProcessor
 {
     private readonly ProductBundlesLoader _pluginLoader;
     private readonly IProductBundleInstanceStorage _instanceStorage;
+    private readonly ResilienceManager _resilienceManager;
     private readonly ILogger<ProductBundleBackgroundService> _logger;
 
     public ProductBundleBackgroundService(
         ProductBundlesLoader pluginLoader,
         IProductBundleInstanceStorage instanceStorage,
+        ResilienceManager resilienceManager,
         ILogger<ProductBundleBackgroundService> logger)
     {
         _pluginLoader = pluginLoader;
         _instanceStorage = instanceStorage;
+        _resilienceManager = resilienceManager;
         _logger = logger;
     }
 
@@ -91,8 +95,15 @@ public class ProductBundleBackgroundService : IBackgroundJobProcessor
                             // Add recurring job metadata to the instance properties
                             var instanceCopy = CreateInstanceCopyWithJobMetadata(inst, parameters, recurringJobName, recurringJob);
                             
-                            // Execute the plugin's HandleEvent method
-                            var result = plugin.HandleEvent(eventName, instanceCopy);
+                            // Execute the plugin's HandleEvent method with timeout protection
+                            var result = await _resilienceManager.ExecuteHandleEventAsync(plugin, eventName, instanceCopy);
+                            
+                            if (result == null)
+                            {
+                                _logger.LogWarning("Plugin '{PluginId}' HandleEvent failed or timed out for recurring job '{RecurringJobName}'", 
+                                    plugin.Id, recurringJobName);
+                                return false;
+                            }
                             
                             // Update the instance in storage
                             return await UpdateInstanceInStorageAsync(result, inst.Id, $"recurring job '{recurringJobName}'");
@@ -142,8 +153,15 @@ public class ProductBundleBackgroundService : IBackgroundJobProcessor
                 productBundleId: instance.ProductBundleId,
                 operation: async (plugin) =>
                 {
-                    // Execute the plugin
-                    var result = plugin.HandleEvent(eventName, instance);
+                    // Execute the plugin with timeout protection
+                    var result = await _resilienceManager.ExecuteHandleEventAsync(plugin, eventName, instance);
+                    
+                    if (result == null)
+                    {
+                        _logger.LogWarning("Plugin '{PluginId}' HandleEvent failed or timed out for instance '{InstanceId}'", 
+                            plugin.Id, instanceId);
+                        return;
+                    }
 
                     // Update the original instance with the result
                     await UpdateInstanceInStorageAsync(result, instanceId, "ProductBundle execution");
@@ -430,8 +448,15 @@ public class ProductBundleBackgroundService : IBackgroundJobProcessor
             // Create enriched copy with entity event metadata
             var enrichedInstance = CreateInstanceCopyWithEntityEventMetadata(inst, entityChangeEvent);
             
-            // Execute the plugin with the enriched instance
-            var result = plugin.HandleEvent(eventName, enrichedInstance);
+            // Execute the plugin with the enriched instance using timeout protection
+            var result = await _resilienceManager.ExecuteHandleEventAsync(plugin, eventName, enrichedInstance);
+            
+            if (result == null)
+            {
+                _logger.LogWarning("Plugin '{PluginId}' HandleEvent failed or timed out for entity event processing of instance '{InstanceId}'", 
+                    plugin.Id, inst.Id);
+                return false;
+            }
             
             // Update the result instance in storage
             return await UpdateInstanceInStorageAsync(result, inst.Id, "entity event processing");

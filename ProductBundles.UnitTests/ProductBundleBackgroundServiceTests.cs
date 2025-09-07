@@ -28,7 +28,9 @@ namespace ProductBundles.UnitTests
             _mockPluginLoader = new MockProductBundlesLoader();
             _mockStorage = new MockProductBundleInstanceStorage();
             _logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductBundleBackgroundService>.Instance;
-            _backgroundService = new ProductBundleBackgroundService(_mockPluginLoader, _mockStorage, _logger);
+            var resilienceManager = new ProductBundles.Core.Resilience.ResilienceManager(
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductBundles.Core.Resilience.ResilienceManager>.Instance);
+            _backgroundService = new ProductBundleBackgroundService(_mockPluginLoader, _mockStorage, resilienceManager, _logger);
         }
 
         [TestMethod]

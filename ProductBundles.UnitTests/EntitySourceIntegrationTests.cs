@@ -44,7 +44,9 @@ namespace ProductBundles.UnitTests
             _customerEventSource = new CustomerEventSource(_sourceLogger, "integration-test-source");
             
             // Setup background service
-            _backgroundService = new ProductBundleBackgroundService(_pluginLoader, _instanceStorage, _serviceLogger);
+            var resilienceManager = new ProductBundles.Core.Resilience.ResilienceManager(
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<ProductBundles.Core.Resilience.ResilienceManager>.Instance);
+            _backgroundService = new ProductBundleBackgroundService(_pluginLoader, _instanceStorage, resilienceManager, _serviceLogger);
             
             // Register background service as processor in entity source manager
             _entitySourceManager.RegisterProcessor("background-service", _backgroundService);

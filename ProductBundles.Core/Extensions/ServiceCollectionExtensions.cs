@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ProductBundles.Core.Resilience;
 using ProductBundles.Core.Serialization;
 using ProductBundles.Core.Storage;
 using Microsoft.Extensions.Logging;
@@ -184,6 +185,25 @@ namespace ProductBundles.Core.Extensions
         {
             services.AddProductBundleInstanceSerialization(configureJsonOptions);
             services.AddProductBundleInstanceFileSystemStorage(configureStorage);
+            
+            return services;
+        }
+
+        /// <summary>
+        /// Adds plugin resilience services to the DI container
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="timeout">Optional timeout for plugin operations (defaults to 30 seconds)</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddPluginResilience(
+            this IServiceCollection services,
+            TimeSpan? timeout = null)
+        {
+            services.TryAddSingleton<ResilienceManager>(provider =>
+            {
+                var logger = provider.GetRequiredService<ILogger<ResilienceManager>>();
+                return new ResilienceManager(logger, timeout);
+            });
             
             return services;
         }

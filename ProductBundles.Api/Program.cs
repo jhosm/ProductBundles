@@ -30,6 +30,9 @@ builder.Services.AddProductBundleInstanceServices(
         jsonOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
+// Register plugin resilience services with 30 second timeout
+builder.Services.AddPluginResilience(TimeSpan.FromSeconds(30));
+
 // Add Hangfire services
 builder.Services.AddHangfire(configuration => configuration
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
