@@ -226,7 +226,8 @@ AppPackages/
 #####
 
 plugins/
-storage/
+ProductBundles.Api/storage/
+/storage/
 bin/
 obj/
 plugins/SamplePlugin/ProductBundles.SamplePlugin.dll
