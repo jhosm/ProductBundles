@@ -87,7 +87,7 @@ If you prefer a local SQL Server installation:
 #### SQL Server Test Configuration
 
 The SQL Server tests are located in:
-- `ProductBundles.UnitTests/SqlServerProductBundleInstanceStorageTests.cs`
+- `ProductBundles.UnitTests/SqlServerProductBundleInstanceStorageTests.cs` (tests SqlServerVersionedProductBundleInstanceStorage)
 - `ProductBundles.UnitTests/ServiceCollectionExtensionsSqlServerTests.cs`
 
 **Test Database Schema:**
@@ -149,7 +149,7 @@ dotnet test --collect:"XPlat Code Coverage" --logger "console;verbosity=normal"
 
 #### Storage Tests Only
 ```bash
-# SQL Server storage tests
+# SQL Server versioned storage tests
 dotnet test --filter "ClassName~SqlServerProductBundleInstanceStorageTests"
 
 # MongoDB storage tests  
@@ -198,7 +198,7 @@ dotnet test ProductBundles.UnitTests/ --configuration Release
 
 #### Storage Implementation Tests
 - **FileSystemProductBundleInstanceStorageTests** (26 tests) - File-based storage
-- **SqlServerProductBundleInstanceStorageTests** (26 tests) - SQL Server storage
+- **SqlServerProductBundleInstanceStorageTests** (26 tests) - SQL Server versioned storage
 - **MongoProductBundleInstanceStorageTests** (72 tests) - MongoDB storage
 - **JsonProductBundleInstanceSerializerTests** (15 tests) - JSON serialization
 

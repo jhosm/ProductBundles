@@ -205,8 +205,8 @@ namespace ProductBundles.Core.Extensions
             // Register the storage implementation
             services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
             {
-                var logger = provider.GetService<ILogger<SqlServerProductBundleInstanceStorage>>();
-                return new SqlServerProductBundleInstanceStorage(connectionString, logger);
+                var logger = provider.GetService<ILogger<SqlServerVersionedProductBundleInstanceStorage>>();
+                return new SqlServerVersionedProductBundleInstanceStorage(connectionString, logger);
             });
 
             return services;

@@ -12,22 +12,22 @@ namespace ProductBundles.UnitTests
     public class SqlServerProductBundleInstanceStorageTests
     {
         private const string TestConnectionString = "Server=localhost,1433;Database=ProductBundlesTest;User Id=sa;Password=ProductBundles123!;TrustServerCertificate=true;MultipleActiveResultSets=true;";
-        private ILogger<SqlServerProductBundleInstanceStorage>? _logger;
-        private SqlServerProductBundleInstanceStorage? _storage;
+        private ILogger<SqlServerVersionedProductBundleInstanceStorage>? _logger;
+        private SqlServerVersionedProductBundleInstanceStorage? _storage;
 
         [TestInitialize]
         public async Task Setup()
         {
             var loggerFactory = LoggerFactory.Create(builder => { });
-            _logger = loggerFactory.CreateLogger<SqlServerProductBundleInstanceStorage>();
+            _logger = loggerFactory.CreateLogger<SqlServerVersionedProductBundleInstanceStorage>();
             
             try
             {
-                // Try to create storage instance - this will initialize the database
-                _storage = new SqlServerProductBundleInstanceStorage(TestConnectionString, _logger);
-                
-                // Clean up any existing test data
+                // Clean up any existing test data first
                 await CleanupTestData();
+                
+                // Then create storage instance - this will initialize the database with correct schema
+                _storage = new SqlServerVersionedProductBundleInstanceStorage(TestConnectionString, _logger);
             }
             catch (PlatformNotSupportedException)
             {
@@ -57,9 +57,18 @@ namespace ProductBundles.UnitTests
                 using var connection = new SqlConnection(TestConnectionString);
                 await connection.OpenAsync();
                 
-                var sql = "DELETE FROM ProductBundleInstances";
-                using var command = new SqlCommand(sql, connection);
-                await command.ExecuteNonQueryAsync();
+                // Drop tables to ensure clean schema for versioned storage
+                var dropVersionsTableSql = @"
+                    IF EXISTS (SELECT * FROM sysobjects WHERE name='ProductBundleInstanceVersions' AND xtype='U')
+                    DROP TABLE ProductBundleInstanceVersions";
+                using var dropVersionsCommand = new SqlCommand(dropVersionsTableSql, connection);
+                await dropVersionsCommand.ExecuteNonQueryAsync();
+                
+                var dropInstancesTableSql = @"
+                    IF EXISTS (SELECT * FROM sysobjects WHERE name='ProductBundleInstances' AND xtype='U')
+                    DROP TABLE ProductBundleInstances";
+                using var dropInstancesCommand = new SqlCommand(dropInstancesTableSql, connection);
+                await dropInstancesCommand.ExecuteNonQueryAsync();
             }
             catch (Exception ex)
             {
