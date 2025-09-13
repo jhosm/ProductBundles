@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.Sdk", "Produ
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.Core", "ProductBundles.Core\ProductBundles.Core.csproj", "{B3C45E8A-1F2D-4E5A-9B8C-6D7E8F9A0B1C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.PluginLoader", "ProductBundles.PluginLoader\ProductBundles.PluginLoader.csproj", "{A9C92BA2-2CEF-4207-8A31-1CB463F075E1}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.Api", "ProductBundles.Api\ProductBundles.Api.csproj", "{463A2E50-A108-4569-8ECA-A6732BC6B953}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProductBundles.UnitTests", "ProductBundles.UnitTests\ProductBundles.UnitTests.csproj", "{2E9C4633-B0E2-4F88-8696-459D89F75101}"
@@ -30,10 +28,6 @@ Global
 		{B3C45E8A-1F2D-4E5A-9B8C-6D7E8F9A0B1C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B3C45E8A-1F2D-4E5A-9B8C-6D7E8F9A0B1C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B3C45E8A-1F2D-4E5A-9B8C-6D7E8F9A0B1C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A9C92BA2-2CEF-4207-8A31-1CB463F075E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A9C92BA2-2CEF-4207-8A31-1CB463F075E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A9C92BA2-2CEF-4207-8A31-1CB463F075E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A9C92BA2-2CEF-4207-8A31-1CB463F075E1}.Release|Any CPU.Build.0 = Release|Any CPU
 		{463A2E50-A108-4569-8ECA-A6732BC6B953}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{463A2E50-A108-4569-8ECA-A6732BC6B953}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{463A2E50-A108-4569-8ECA-A6732BC6B953}.Release|Any CPU.ActiveCfg = Release|Any CPU

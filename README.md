@@ -69,8 +69,6 @@ The ProductBundles platform follows a layered architecture with clear separation
    - **Background Jobs**: Hangfire integration for async processing
    - **Swagger Documentation**: OpenAPI specifications with interactive documentation
 
-4. **ProductBundles.PluginLoader**: Console application for testing and demonstration
-
 ### **Entity Source System**
 
 The Entity Source system provides event-driven integration capabilities, allowing external systems to trigger ProductBundle processing based on entity lifecycle events (create, update, delete).
@@ -336,13 +334,6 @@ dotnet build
 ./run-tests-with-coverage.sh
 ```
 
-### 2. Run the Console Application
-
-```bash
-# Run the console demonstration
-dotnet run --project ProductBundles.PluginLoader
-```
-
 ### 3. Run the REST API
 
 ```bash
@@ -535,11 +526,6 @@ cp bin/Debug/net8.0/MyCustomPlugin.dll ../plugins/
 ```
 
 ### 4. Test Your Plugin
-
-#### Console Testing
-```bash
-dotnet run --project ProductBundles.PluginLoader
-```
 
 #### API Testing
 ```bash
