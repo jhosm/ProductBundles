@@ -47,10 +47,12 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_WithDirectory_RegistersAllServices()
+        public void AddProductBundleServices_WithDirectory_RegistersAllServices()
         {
             // Act
-            var result = _services.AddProductBundleInstanceServices(_testStorageDirectory);
+            var result = _services
+                .AddProductBundleJsonSerialization()
+                .AddProductBundleFileSystemStorage(_testStorageDirectory);
 
             // Assert
             Assert.AreSame(_services, result, "Method should return the same service collection for chaining");
@@ -76,18 +78,20 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_WithDirectoryAndJsonOptions_AppliesConfiguration()
+        public void AddProductBundleServices_WithDirectoryAndJsonOptions_AppliesConfiguration()
         {
             // Arrange
             bool configureJsonCalled = false;
 
             // Act
-            _services.AddProductBundleInstanceServices(_testStorageDirectory, options =>
-            {
-                configureJsonCalled = true;
-                options.WriteIndented = false;
-                options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-            });
+            _services
+                .AddProductBundleJsonSerialization(options =>
+                {
+                    configureJsonCalled = true;
+                    options.WriteIndented = false;
+                    options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+                })
+                .AddProductBundleFileSystemStorage(_testStorageDirectory);
 
             // Assert
             Assert.IsTrue(configureJsonCalled, "JSON configuration action should be called");
@@ -101,10 +105,12 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_WithDirectoryAndNullJsonOptions_DoesNotThrow()
+        public void AddProductBundleServices_WithDirectoryAndNullJsonOptions_DoesNotThrow()
         {
             // Act & Assert - Should not throw
-            var result = _services.AddProductBundleInstanceServices(_testStorageDirectory, null);
+            var result = _services
+                .AddProductBundleJsonSerialization(null)
+                .AddProductBundleFileSystemStorage(_testStorageDirectory);
             
             Assert.AreSame(_services, result, "Method should return the same service collection for chaining");
             
@@ -114,19 +120,21 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_WithStorageConfiguration_RegistersAllServices()
+        public void AddProductBundleServices_WithStorageConfiguration_RegistersAllServices()
         {
             // Arrange
             bool configureStorageCalled = false;
 
             // Act
-            var result = _services.AddProductBundleInstanceServices(options =>
-            {
-                configureStorageCalled = true;
-                options.StorageDirectory = _testStorageDirectory;
-                options.MaxConcurrentOperations = 5;
-                options.CreateDirectoryIfNotExists = true;
-            });
+            var result = _services
+                .AddProductBundleJsonSerialization()
+                .AddProductBundleFileSystemStorage(options =>
+                {
+                    configureStorageCalled = true;
+                    options.StorageDirectory = _testStorageDirectory;
+                    options.MaxConcurrentOperations = 5;
+                    options.CreateDirectoryIfNotExists = true;
+                });
 
             // Assert
             Assert.AreSame(_services, result, "Method should return the same service collection for chaining");
@@ -143,23 +151,23 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_WithStorageAndJsonConfiguration_AppliesBothConfigurations()
+        public void AddProductBundleServices_WithStorageAndJsonConfiguration_AppliesBothConfigurations()
         {
             // Arrange
             bool configureStorageCalled = false;
             bool configureJsonCalled = false;
 
             // Act
-            _services.AddProductBundleInstanceServices(
-                storageOptions =>
-                {
-                    configureStorageCalled = true;
-                    storageOptions.StorageDirectory = _testStorageDirectory;
-                },
-                jsonOptions =>
+            _services
+                .AddProductBundleJsonSerialization(jsonOptions =>
                 {
                     configureJsonCalled = true;
                     jsonOptions.WriteIndented = false;
+                })
+                .AddProductBundleFileSystemStorage(storageOptions =>
+                {
+                    configureStorageCalled = true;
+                    storageOptions.StorageDirectory = _testStorageDirectory;
                 });
 
             // Assert
@@ -183,25 +191,27 @@ namespace ProductBundles.UnitTests
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceServices_WithEmptyStorageDirectory_ThrowsException()
+        public void AddProductBundleServices_WithEmptyStorageDirectory_ThrowsException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceServices((string)string.Empty);
+            _services.AddProductBundleFileSystemStorage((string)string.Empty);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentNullException))]
-        public void AddProductBundleInstanceServices_WithNullStorageConfiguration_ThrowsException()
+        public void AddProductBundleServices_WithNullStorageConfiguration_ThrowsException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceServices((Action<ProductBundleInstanceStorageOptions>)null!);
+            _services.AddProductBundleFileSystemStorage((Action<ProductBundleInstanceStorageOptions>)null!);
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_ServicesAreSingletons()
+        public void AddProductBundleServices_ServicesAreSingletons()
         {
             // Arrange
-            _services.AddProductBundleInstanceServices(_testStorageDirectory);
+            _services
+                .AddProductBundleJsonSerialization()
+                .AddProductBundleFileSystemStorage(_testStorageDirectory);
             _serviceProvider = _services.BuildServiceProvider();
 
             // Act & Assert - Test serializer singleton
@@ -221,11 +231,15 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_CalledMultipleTimes_RegistersOnlyOnce()
+        public void AddProductBundleServices_CalledMultipleTimes_RegistersOnlyOnce()
         {
             // Act
-            _services.AddProductBundleInstanceServices(_testStorageDirectory);
-            _services.AddProductBundleInstanceServices(_testStorageDirectory + "2");
+            _services
+                .AddProductBundleJsonSerialization()
+                .AddProductBundleFileSystemStorage(_testStorageDirectory);
+            _services
+                .AddProductBundleJsonSerialization()
+                .AddProductBundleFileSystemStorage(_testStorageDirectory + "2");
 
             // Assert
             _serviceProvider = _services.BuildServiceProvider();
@@ -238,10 +252,12 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceServices_IntegrationTest_ServicesWorkTogether()
+        public void AddProductBundleServices_IntegrationTest_ServicesWorkTogether()
         {
             // Arrange
-            _services.AddProductBundleInstanceServices(_testStorageDirectory);
+            _services
+                .AddProductBundleJsonSerialization()
+                .AddProductBundleFileSystemStorage(_testStorageDirectory);
             _serviceProvider = _services.BuildServiceProvider();
 
             // Act

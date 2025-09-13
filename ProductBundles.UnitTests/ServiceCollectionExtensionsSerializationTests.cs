@@ -22,10 +22,10 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceSerialization_WithDefaultOptions_RegistersServices()
+        public void AddProductBundleJsonSerialization_WithDefaultOptions_RegistersServices()
         {
             // Act
-            var result = _services.AddProductBundleInstanceSerialization();
+            var result = _services.AddProductBundleJsonSerialization();
 
             // Assert
             Assert.AreSame(_services, result, "Method should return the same service collection for chaining");
@@ -45,13 +45,13 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceSerialization_WithCustomOptions_AppliesConfiguration()
+        public void AddProductBundleJsonSerialization_WithCustomOptions_AppliesConfiguration()
         {
             // Arrange
             bool configureOptionsCalled = false;
 
             // Act
-            _services.AddProductBundleInstanceSerialization(options =>
+            _services.AddProductBundleJsonSerialization(options =>
             {
                 configureOptionsCalled = true;
                 options.WriteIndented = false;
@@ -69,10 +69,10 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceSerialization_WithNullConfigureOptions_DoesNotThrow()
+        public void AddProductBundleJsonSerialization_WithNullConfigureOptions_DoesNotThrow()
         {
             // Act & Assert - Should not throw
-            var result = _services.AddProductBundleInstanceSerialization(null);
+            var result = _services.AddProductBundleJsonSerialization(null);
             
             Assert.AreSame(_services, result, "Method should return the same service collection for chaining");
             
@@ -82,11 +82,11 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceSerialization_CalledMultipleTimes_RegistersOnlyOnce()
+        public void AddProductBundleJsonSerialization_CalledMultipleTimes_RegistersOnlyOnce()
         {
             // Act
-            _services.AddProductBundleInstanceSerialization();
-            _services.AddProductBundleInstanceSerialization(options => options.WriteIndented = false);
+            _services.AddProductBundleJsonSerialization();
+            _services.AddProductBundleJsonSerialization(options => options.WriteIndented = false);
 
             // Assert
             _serviceProvider = _services.BuildServiceProvider();
@@ -96,10 +96,10 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceSerialization_JsonSerializerOptions_IsSingleton()
+        public void AddProductBundleJsonSerialization_JsonSerializerOptions_IsSingleton()
         {
             // Arrange
-            _services.AddProductBundleInstanceSerialization();
+            _services.AddProductBundleJsonSerialization();
             _serviceProvider = _services.BuildServiceProvider();
 
             // Act
@@ -111,10 +111,10 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceSerialization_Serializer_IsSingleton()
+        public void AddProductBundleJsonSerialization_Serializer_IsSingleton()
         {
             // Arrange
-            _services.AddProductBundleInstanceSerialization();
+            _services.AddProductBundleJsonSerialization();
             _serviceProvider = _services.BuildServiceProvider();
 
             // Act

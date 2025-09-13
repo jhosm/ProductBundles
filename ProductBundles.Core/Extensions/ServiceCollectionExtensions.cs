@@ -10,81 +10,91 @@ using MongoDB.Driver;
 namespace ProductBundles.Core.Extensions
 {
     /// <summary>
-    /// Extension methods for configuring ProductBundle services in the DI container
+    /// Extension methods for configuring ProductBundle services in the DI container.
+    /// Each method registers a specific service type for better composability.
     /// </summary>
     public static class ServiceCollectionExtensions
     {
+        #region Serialization Services
+
         /// <summary>
-        /// Adds ProductBundle serialization services to the DI container
+        /// Adds JSON serialization services for ProductBundle instances
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="configureOptions">Optional action to configure JSON serialization options</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceSerialization(
+        public static IServiceCollection AddProductBundleJsonSerialization(
             this IServiceCollection services, 
             Action<JsonSerializerOptions>? configureOptions = null)
         {
-            // Create and configure JSON serializer options immediately
             var options = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = true
             };
             
-            // Call configuration action immediately during registration
             configureOptions?.Invoke(options);
-            
-            // Register the configured options as a singleton
             services.AddSingleton(options);
-
-            // Register the default serializer
             services.TryAddSingleton<IProductBundleInstanceSerializer, JsonProductBundleInstanceSerializer>();
 
             return services;
         }
 
         /// <summary>
-        /// Adds ProductBundle file system storage services to the DI container
+        /// Adds custom serialization services for ProductBundle instances
+        /// </summary>
+        /// <typeparam name="TSerializer">The serializer implementation type</typeparam>
+        /// <param name="services">The service collection</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddProductBundleCustomSerialization<TSerializer>(
+            this IServiceCollection services)
+            where TSerializer : class, IProductBundleInstanceSerializer
+        {
+            services.TryAddSingleton<IProductBundleInstanceSerializer, TSerializer>();
+            return services;
+        }
+
+        #endregion
+
+        #region Storage Services
+
+        /// <summary>
+        /// Adds file system storage for ProductBundle instances
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="storageDirectory">The directory to store instance files</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceFileSystemStorage(
+        public static IServiceCollection AddProductBundleFileSystemStorage(
             this IServiceCollection services, 
             string storageDirectory)
         {
             if (string.IsNullOrWhiteSpace(storageDirectory))
                 throw new ArgumentException("Storage directory cannot be null or empty", nameof(storageDirectory));
 
-            // Register storage directory as a singleton
             services.AddSingleton<ProductBundleInstanceStorageOptions>(new ProductBundleInstanceStorageOptions
             {
                 StorageDirectory = storageDirectory
             });
 
-            // Register the storage implementation
             services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
             {
                 var options = provider.GetRequiredService<ProductBundleInstanceStorageOptions>();
                 var serializer = provider.GetRequiredService<IProductBundleInstanceSerializer>();
                 var logger = provider.GetService<ILogger<FileSystemProductBundleInstanceStorage>>();
                 
-                return new FileSystemProductBundleInstanceStorage(
-                    options.StorageDirectory, 
-                    serializer, 
-                    logger);
+                return new FileSystemProductBundleInstanceStorage(options.StorageDirectory, serializer, logger);
             });
 
             return services;
         }
 
         /// <summary>
-        /// Adds ProductBundle file system storage services to the DI container with configuration
+        /// Adds file system storage for ProductBundle instances with configuration
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="configure">Action to configure storage options</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceFileSystemStorage(
+        public static IServiceCollection AddProductBundleFileSystemStorage(
             this IServiceCollection services, 
             Action<ProductBundleInstanceStorageOptions> configure)
         {
@@ -97,18 +107,18 @@ namespace ProductBundles.Core.Extensions
             if (string.IsNullOrWhiteSpace(options.StorageDirectory))
                 throw new ArgumentException("Storage directory must be specified in options", nameof(configure));
 
-            return services.AddProductBundleInstanceFileSystemStorage(options.StorageDirectory);
+            return services.AddProductBundleFileSystemStorage(options.StorageDirectory);
         }
 
         /// <summary>
-        /// Adds ProductBundle MongoDB storage services to the DI container
+        /// Adds MongoDB storage for ProductBundle instances
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="connectionString">The MongoDB connection string</param>
         /// <param name="databaseName">The MongoDB database name</param>
         /// <param name="collectionName">The MongoDB collection name (optional, defaults to "ProductBundleInstances")</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceMongoStorage(
+        public static IServiceCollection AddProductBundleMongoStorage(
             this IServiceCollection services,
             string connectionString,
             string databaseName,
@@ -122,31 +132,15 @@ namespace ProductBundles.Core.Extensions
 
             collectionName ??= "ProductBundleInstances";
 
-            // Register MongoDB client as singleton
-            services.TryAddSingleton<IMongoClient>(provider =>
-            {
-                return new MongoClient(connectionString);
-            });
-
-            // Register MongoDB database as singleton
-            services.TryAddSingleton<IMongoDatabase>(provider =>
-            {
-                var client = provider.GetRequiredService<IMongoClient>();
-                return client.GetDatabase(databaseName);
-            });
-
-            // Register MongoDB collection as singleton
-            services.TryAddSingleton<IMongoCollection<ProductBundles.Sdk.ProductBundleInstance>>(provider =>
-            {
-                var database = provider.GetRequiredService<IMongoDatabase>();
-                return database.GetCollection<ProductBundles.Sdk.ProductBundleInstance>(collectionName);
-            });
+            // Register MongoDB infrastructure services
+            services.AddMongoClient(connectionString);
+            services.AddMongoDatabase(databaseName);
+            services.AddMongoCollection(collectionName);
 
             // Register the storage implementation
             services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
             {
                 var logger = provider.GetService<ILogger<MongoProductBundleInstanceStorage>>();
-                
                 return new MongoProductBundleInstanceStorage(connectionString, databaseName, collectionName, logger);
             });
 
@@ -154,55 +148,18 @@ namespace ProductBundles.Core.Extensions
         }
 
         /// <summary>
-        /// Adds all ProductBundle services (serialization and storage) to the DI container
-        /// </summary>
-        /// <param name="services">The service collection</param>
-        /// <param name="storageDirectory">The directory to store instance files</param>
-        /// <param name="configureJsonOptions">Optional action to configure JSON serialization options</param>
-        /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceServices(
-            this IServiceCollection services,
-            string storageDirectory,
-            Action<JsonSerializerOptions>? configureJsonOptions = null)
-        {
-            services.AddProductBundleInstanceSerialization(configureJsonOptions);
-            services.AddProductBundleInstanceFileSystemStorage(storageDirectory);
-            
-            return services;
-        }
-
-        /// <summary>
-        /// Adds all ProductBundle services (serialization and storage) to the DI container with configuration
-        /// </summary>
-        /// <param name="services">The service collection</param>
-        /// <param name="configureStorage">Action to configure storage options</param>
-        /// <param name="configureJsonOptions">Optional action to configure JSON serialization options</param>
-        /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceServices(
-            this IServiceCollection services,
-            Action<ProductBundleInstanceStorageOptions> configureStorage,
-            Action<JsonSerializerOptions>? configureJsonOptions = null)
-        {
-            services.AddProductBundleInstanceSerialization(configureJsonOptions);
-            services.AddProductBundleInstanceFileSystemStorage(configureStorage);
-            
-            return services;
-        }
-
-        /// <summary>
-        /// Adds ProductBundle SQL Server storage services to the DI container
+        /// Adds SQL Server storage for ProductBundle instances
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="connectionString">The SQL Server connection string</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceSqlServerStorage(
+        public static IServiceCollection AddProductBundleSqlServerStorage(
             this IServiceCollection services,
             string connectionString)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new ArgumentException("Connection string cannot be null or empty", nameof(connectionString));
 
-            // Register the storage implementation
             services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
             {
                 var logger = provider.GetService<ILogger<SqlServerVersionedProductBundleInstanceStorage>>();
@@ -213,22 +170,87 @@ namespace ProductBundles.Core.Extensions
         }
 
         /// <summary>
-        /// Adds all ProductBundle services with SQL Server storage to the DI container
+        /// Adds custom storage implementation for ProductBundle instances
         /// </summary>
+        /// <typeparam name="TStorage">The storage implementation type</typeparam>
         /// <param name="services">The service collection</param>
-        /// <param name="connectionString">The SQL Server connection string</param>
-        /// <param name="configureJsonOptions">Optional action to configure JSON serialization options</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddProductBundleInstanceSqlServerServices(
-            this IServiceCollection services,
-            string connectionString,
-            Action<JsonSerializerOptions>? configureJsonOptions = null)
+        public static IServiceCollection AddProductBundleCustomStorage<TStorage>(
+            this IServiceCollection services)
+            where TStorage : class, IProductBundleInstanceStorage
         {
-            services.AddProductBundleInstanceSerialization(configureJsonOptions);
-            services.AddProductBundleInstanceSqlServerStorage(connectionString);
-            
+            services.TryAddSingleton<IProductBundleInstanceStorage, TStorage>();
             return services;
         }
+
+        #endregion
+
+        #region MongoDB Infrastructure Services
+
+        /// <summary>
+        /// Adds MongoDB client services to the DI container
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="connectionString">The MongoDB connection string</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddMongoClient(
+            this IServiceCollection services,
+            string connectionString)
+        {
+            if (string.IsNullOrWhiteSpace(connectionString))
+                throw new ArgumentException("Connection string cannot be null or empty", nameof(connectionString));
+
+            services.TryAddSingleton<IMongoClient>(provider => new MongoClient(connectionString));
+            return services;
+        }
+
+        /// <summary>
+        /// Adds MongoDB database services to the DI container
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="databaseName">The MongoDB database name</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddMongoDatabase(
+            this IServiceCollection services,
+            string databaseName)
+        {
+            if (string.IsNullOrWhiteSpace(databaseName))
+                throw new ArgumentException("Database name cannot be null or empty", nameof(databaseName));
+
+            services.TryAddSingleton<IMongoDatabase>(provider =>
+            {
+                var client = provider.GetRequiredService<IMongoClient>();
+                return client.GetDatabase(databaseName);
+            });
+
+            return services;
+        }
+
+        /// <summary>
+        /// Adds MongoDB collection services to the DI container
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="collectionName">The MongoDB collection name</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddMongoCollection(
+            this IServiceCollection services,
+            string collectionName)
+        {
+            if (string.IsNullOrWhiteSpace(collectionName))
+                throw new ArgumentException("Collection name cannot be null or empty", nameof(collectionName));
+
+            services.TryAddSingleton<IMongoCollection<ProductBundles.Sdk.ProductBundleInstance>>(provider =>
+            {
+                var database = provider.GetRequiredService<IMongoDatabase>();
+                return database.GetCollection<ProductBundles.Sdk.ProductBundleInstance>(collectionName);
+            });
+
+            return services;
+        }
+
+        #endregion
+
+        #region Resilience Services
 
         /// <summary>
         /// Adds plugin resilience services to the DI container
@@ -248,5 +270,8 @@ namespace ProductBundles.Core.Extensions
             
             return services;
         }
+
+        #endregion
+
     }
 }

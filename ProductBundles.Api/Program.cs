@@ -22,13 +22,13 @@ builder.Services.AddSingleton<ProductBundlesLoader>(serviceProvider =>
     return new ProductBundlesLoader("plugins", logger);
 });
 
-// Register ProductBundleInstance storage services
-builder.Services.AddProductBundleInstanceServices(
-    Path.Combine(Directory.GetCurrentDirectory(), "storage"),
-    jsonOptions => {
+// Register ProductBundle services with better composability
+builder.Services
+    .AddProductBundleJsonSerialization(jsonOptions => {
         jsonOptions.WriteIndented = true;
         jsonOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-    });
+    })
+    .AddProductBundleFileSystemStorage(Path.Combine(Directory.GetCurrentDirectory(), "storage"));
 
 // Register plugin resilience services with 30 second timeout
 builder.Services.AddPluginResilience(TimeSpan.FromSeconds(30));

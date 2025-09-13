@@ -47,13 +47,13 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithValidDirectory_RegistersServices()
+        public void AddProductBundleFileSystemStorage_WithValidDirectory_RegistersServices()
         {
             // Arrange
-            _services.AddProductBundleInstanceSerialization(); // Required dependency
+            _services.AddProductBundleJsonSerialization(); // Required dependency
 
             // Act
-            var result = _services.AddProductBundleInstanceFileSystemStorage((string)_testStorageDirectory);
+            var result = _services.AddProductBundleFileSystemStorage((string)_testStorageDirectory);
 
             // Assert
             Assert.AreSame(_services, result, "Method should return the same service collection for chaining");
@@ -72,39 +72,39 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithEmptyDirectory_ThrowsArgumentException()
+        public void AddProductBundleFileSystemStorage_WithEmptyDirectory_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.ThrowsException<ArgumentException>(() =>
-                _services.AddProductBundleInstanceFileSystemStorage(string.Empty));
+                _services.AddProductBundleFileSystemStorage(string.Empty));
 
             Assert.AreEqual("storageDirectory", exception.ParamName, "Should specify correct parameter name");
             StringAssert.Contains(exception.Message, "Storage directory cannot be null or empty", "Should have descriptive error message");
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithWhitespaceDirectory_ThrowsArgumentException()
+        public void AddProductBundleFileSystemStorage_WithWhitespaceDirectory_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.ThrowsException<ArgumentException>(() =>
-                _services.AddProductBundleInstanceFileSystemStorage("   "));
+                _services.AddProductBundleFileSystemStorage("   "));
 
             Assert.AreEqual("storageDirectory", exception.ParamName, "Should specify correct parameter name");
             StringAssert.Contains(exception.Message, "Storage directory cannot be null or empty", "Should have descriptive error message");
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithConfigurationAction_CallsConfiguration()
+        public void AddProductBundleFileSystemStorage_WithConfigurationAction_CallsConfiguration()
         {
             // Arrange
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddProductBundleInstanceSerialization();
+            services.AddProductBundleJsonSerialization();
             var configurationCalled = false;
             var expectedDirectory = Path.GetTempPath();
 
             // Act
-            services.AddProductBundleInstanceFileSystemStorage(options =>
+            services.AddProductBundleFileSystemStorage(options =>
             {
                 configurationCalled = true;
                 options.StorageDirectory = expectedDirectory;
@@ -123,39 +123,39 @@ namespace ProductBundles.UnitTests
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceFileSystemStorage_EmptyDirectory_ThrowsException()
+        public void AddProductBundleFileSystemStorage_EmptyDirectory_ThrowsException()
         {
             // Arrange
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddProductBundleInstanceSerialization();
+            services.AddProductBundleJsonSerialization();
 
             // Act & Assert
-            services.AddProductBundleInstanceFileSystemStorage(string.Empty);
+            services.AddProductBundleFileSystemStorage(string.Empty);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceFileSystemStorage_WhitespaceDirectory_ThrowsException()
+        public void AddProductBundleFileSystemStorage_WhitespaceDirectory_ThrowsException()
         {
             // Arrange
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddProductBundleInstanceSerialization();
+            services.AddProductBundleJsonSerialization();
 
             // Act & Assert
-            services.AddProductBundleInstanceFileSystemStorage("   ");
+            services.AddProductBundleFileSystemStorage("   ");
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithConfiguration_RegistersServices()
+        public void AddProductBundleFileSystemStorage_WithConfiguration_RegistersServices()
         {
             // Arrange
-            _services.AddProductBundleInstanceSerialization(); // Required dependency
+            _services.AddProductBundleJsonSerialization(); // Required dependency
             bool configureActionCalled = false;
 
             // Act
-            var result = _services.AddProductBundleInstanceFileSystemStorage(options =>
+            var result = _services.AddProductBundleFileSystemStorage(options =>
             {
                 configureActionCalled = true;
                 options.StorageDirectory = _testStorageDirectory;
@@ -175,21 +175,21 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithConfigurationNullAction_ThrowsArgumentNullException()
+        public void AddProductBundleFileSystemStorage_WithConfigurationNullAction_ThrowsArgumentNullException()
         {
             // Act & Assert
             var exception = Assert.ThrowsException<ArgumentNullException>(() =>
-                _services.AddProductBundleInstanceFileSystemStorage((Action<ProductBundleInstanceStorageOptions>)null!));
+                _services.AddProductBundleFileSystemStorage((Action<ProductBundleInstanceStorageOptions>)null!));
 
             Assert.AreEqual("configure", exception.ParamName, "Should specify correct parameter name");
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithConfigurationEmptyDirectory_ThrowsArgumentException()
+        public void AddProductBundleFileSystemStorage_WithConfigurationEmptyDirectory_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.ThrowsException<ArgumentException>(() =>
-                _services.AddProductBundleInstanceFileSystemStorage(options =>
+                _services.AddProductBundleFileSystemStorage(options =>
                 {
                     options.StorageDirectory = string.Empty;
                 }));
@@ -199,11 +199,11 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_WithConfigurationNullDirectory_ThrowsArgumentException()
+        public void AddProductBundleFileSystemStorage_WithConfigurationNullDirectory_ThrowsArgumentException()
         {
             // Act & Assert
             var exception = Assert.ThrowsException<ArgumentException>(() =>
-                _services.AddProductBundleInstanceFileSystemStorage(options =>
+                _services.AddProductBundleFileSystemStorage(options =>
                 {
                     options.StorageDirectory = null!;
                 }));
@@ -213,16 +213,16 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_InjectsLoggerCorrectly()
+        public void AddProductBundleFileSystemStorage_InjectsLoggerCorrectly()
         {
             // Arrange
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddProductBundleInstanceSerialization();
+            services.AddProductBundleJsonSerialization();
             var validDirectory = Path.GetTempPath();
 
             // Act
-            services.AddProductBundleInstanceFileSystemStorage(validDirectory);
+            services.AddProductBundleFileSystemStorage(validDirectory);
 
             // Assert
             var serviceProvider = services.BuildServiceProvider();
@@ -233,16 +233,16 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_ValidDirectory_RegistersServices()
+        public void AddProductBundleFileSystemStorage_ValidDirectory_RegistersServices()
         {
             // Arrange
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddProductBundleInstanceSerialization();
+            services.AddProductBundleJsonSerialization();
             var validDirectory = Path.GetTempPath();
 
             // Act
-            services.AddProductBundleInstanceFileSystemStorage(validDirectory);
+            services.AddProductBundleFileSystemStorage(validDirectory);
 
             // Assert
             var serviceProvider = services.BuildServiceProvider();
@@ -255,11 +255,11 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_Storage_IsSingleton()
+        public void AddProductBundleFileSystemStorage_Storage_IsSingleton()
         {
             // Arrange
-            _services.AddProductBundleInstanceSerialization();
-            _services.AddProductBundleInstanceFileSystemStorage(_testStorageDirectory);
+            _services.AddProductBundleJsonSerialization();
+            _services.AddProductBundleFileSystemStorage(_testStorageDirectory);
             _serviceProvider = _services.BuildServiceProvider();
 
             // Act
@@ -271,17 +271,17 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceFileSystemStorage_MultipleCallsDoNotDuplicate()
+        public void AddProductBundleFileSystemStorage_MultipleCallsDoNotDuplicate()
         {
             // Arrange
             var services = new ServiceCollection();
             services.AddLogging();
-            services.AddProductBundleInstanceSerialization();
+            services.AddProductBundleJsonSerialization();
             var validDirectory = Path.GetTempPath();
 
             // Act
-            services.AddProductBundleInstanceFileSystemStorage(validDirectory);
-            services.AddProductBundleInstanceFileSystemStorage(validDirectory);
+            services.AddProductBundleFileSystemStorage(validDirectory);
+            services.AddProductBundleFileSystemStorage(validDirectory);
 
             // Assert
             var serviceProvider = services.BuildServiceProvider();
@@ -292,7 +292,7 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceMongoStorage_WithConnectionString_RegistersServices()
+        public void AddProductBundleMongoStorage_WithConnectionString_RegistersServices()
         {
             // Arrange
             const string connectionString = "mongodb://localhost:27017";
@@ -300,7 +300,7 @@ namespace ProductBundles.UnitTests
             const string collectionName = "testcollection";
 
             // Act
-            _services.AddProductBundleInstanceMongoStorage(connectionString, databaseName, collectionName);
+            _services.AddProductBundleMongoStorage(connectionString, databaseName, collectionName);
             _serviceProvider = _services.BuildServiceProvider();
 
             // Assert
@@ -321,14 +321,14 @@ namespace ProductBundles.UnitTests
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceMongoStorage_WithDefaultCollectionName_RegistersServicesWithDefaultName()
+        public void AddProductBundleMongoStorage_WithDefaultCollectionName_RegistersServicesWithDefaultName()
         {
             // Arrange
             const string connectionString = "mongodb://localhost:27017";
             const string databaseName = "testdb";
 
             // Act
-            _services.AddProductBundleInstanceMongoStorage(connectionString, databaseName);
+            _services.AddProductBundleMongoStorage(connectionString, databaseName);
             _serviceProvider = _services.BuildServiceProvider();
 
             // Assert
@@ -339,60 +339,60 @@ namespace ProductBundles.UnitTests
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceMongoStorage_WithNullConnectionString_ThrowsArgumentException()
+        public void AddProductBundleMongoStorage_WithNullConnectionString_ThrowsArgumentException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceMongoStorage((string)null!, "testdb");
+            _services.AddProductBundleMongoStorage((string)null!, "testdb");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceMongoStorage_WithEmptyConnectionString_ThrowsArgumentException()
+        public void AddProductBundleMongoStorage_WithEmptyConnectionString_ThrowsArgumentException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceMongoStorage(string.Empty, "testdb");
+            _services.AddProductBundleMongoStorage(string.Empty, "testdb");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceMongoStorage_WithWhitespaceConnectionString_ThrowsArgumentException()
+        public void AddProductBundleMongoStorage_WithWhitespaceConnectionString_ThrowsArgumentException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceMongoStorage("   ", "testdb");
+            _services.AddProductBundleMongoStorage("   ", "testdb");
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceMongoStorage_WithNullDatabaseName_ThrowsArgumentException()
+        public void AddProductBundleMongoStorage_WithNullDatabaseName_ThrowsArgumentException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceMongoStorage("mongodb://localhost:27017", (string)null!);
+            _services.AddProductBundleMongoStorage("mongodb://localhost:27017", (string)null!);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceMongoStorage_WithEmptyDatabaseName_ThrowsArgumentException()
+        public void AddProductBundleMongoStorage_WithEmptyDatabaseName_ThrowsArgumentException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceMongoStorage("mongodb://localhost:27017", string.Empty);
+            _services.AddProductBundleMongoStorage("mongodb://localhost:27017", string.Empty);
         }
 
         [TestMethod]
         [ExpectedException(typeof(ArgumentException))]
-        public void AddProductBundleInstanceMongoStorage_WithWhitespaceDatabaseName_ThrowsArgumentException()
+        public void AddProductBundleMongoStorage_WithWhitespaceDatabaseName_ThrowsArgumentException()
         {
             // Act & Assert
-            _services.AddProductBundleInstanceMongoStorage("mongodb://localhost:27017", "   ");
+            _services.AddProductBundleMongoStorage("mongodb://localhost:27017", "   ");
         }
 
         [TestMethod]
-        public void AddProductBundleInstanceMongoStorage_RegisteredAsSingleton_ReturnsSameInstance()
+        public void AddProductBundleMongoStorage_RegisteredAsSingleton_ReturnsSameInstance()
         {
             // Arrange
             const string connectionString = "mongodb://localhost:27017";
             const string databaseName = "testdb";
 
-            _services.AddProductBundleInstanceMongoStorage(connectionString, databaseName);
+            _services.AddProductBundleMongoStorage(connectionString, databaseName);
             _serviceProvider = _services.BuildServiceProvider();
 
             // Act
