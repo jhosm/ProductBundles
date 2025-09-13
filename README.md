@@ -313,70 +313,40 @@ sequenceDiagram
 
 ## Setup Instructions
 
-### Prerequisites
-- .NET 8.0 SDK or later
-- Optional: MongoDB (for MongoDB storage backend)
+For complete installation and setup instructions, please see **[INSTALL.md](INSTALL.md)**.
 
-### 1. Clone and Build
+### Quick Start
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd windsurf-project
+1. **Database Setup**: Run the DDL scripts from the `InitialSetup/` folder to create required database tables
+2. **Build**: `dotnet build && ./build-plugins.sh`
+3. **Test**: `./run-tests-with-coverage.sh`
+4. **Run**: `dotnet run --project ProductBundles.Api`
 
-# Build all projects
-dotnet build
+The API will be available at:
+- **REST API**: http://localhost:5077
+- **Swagger UI**: http://localhost:5077/swagger  
+- **Hangfire Dashboard**: http://localhost:5077/hangfire
 
-# Build plugins
-./build-plugins.sh
+### Storage Backends
 
-# Run tests
-./run-tests-with-coverage.sh
-```
+The platform supports multiple storage backends:
 
-### 3. Run the REST API
-
-```bash
-# Start the API server
-dotnet run --project ProductBundles.Api
-
-# API will be available at:
-# - http://localhost:5077
-# - Swagger UI: http://localhost:5077/swagger
-# - Hangfire Dashboard: http://localhost:5077/hangfire
-```
-
-### 4. Configure Storage Backend
-
-#### File System Storage (Default)
+#### SQL Server (Recommended)
 ```csharp
-services.AddProductBundleInstanceServices(
-    Path.Combine(Directory.GetCurrentDirectory(), "storage"));
+services.AddProductBundleInstanceSqlServerStorage(connectionString);
 ```
 
-#### MongoDB Storage
+#### MongoDB
 ```csharp
-services.AddProductBundleInstanceMongoStorage(
-    "mongodb://localhost:27017", 
-    "ProductBundles");
+services.AddProductBundleInstanceMongoStorage("mongodb://localhost:27017", "ProductBundles");
 ```
 
-### 5. Environment Configuration
-
-Create `appsettings.json` in ProductBundles.Api:
-```json
-{
-  "ConnectionStrings": {
-    "DefaultStorage": "filesystem:./storage",
-    "MongoDB": "mongodb://localhost:27017"
-  },
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information"
-    }
-  }
-}
+#### File System
+```csharp
+services.AddProductBundleInstanceServices(Path.Combine(Directory.GetCurrentDirectory(), "storage"));
 ```
+
+> **Important**: SQL Server setup requires running DDL scripts with elevated permissions. See [INSTALL.md](INSTALL.md) for detailed database setup instructions.
 
 ## How to Create a Plugin
 

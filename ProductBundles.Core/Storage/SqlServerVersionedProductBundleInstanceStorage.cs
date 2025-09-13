@@ -36,50 +36,26 @@ namespace ProductBundles.Core.Storage
                 using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                // Current instances table (optimized for fast queries)
-                var createCurrentTableSql = @"
-                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ProductBundleInstances' AND xtype='U')
-                    CREATE TABLE ProductBundleInstances (
-                        Id NVARCHAR(450) PRIMARY KEY,
-                        ProductBundleId NVARCHAR(450) NOT NULL,
-                        ProductBundleVersion NVARCHAR(100) NOT NULL,
-                        JsonDocument NVARCHAR(MAX) NOT NULL,
-                        VersionNumber BIGINT NOT NULL DEFAULT 1,
-                        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
-                        UpdatedAt DATETIME2 DEFAULT GETUTCDATE(),
-                        INDEX IX_ProductBundleInstances_ProductBundleId (ProductBundleId),
-                        INDEX IX_ProductBundleInstances_CreatedAt (CreatedAt)
-                    )";
+                // Verify that required tables exist
+                var checkTablesSql = @"
+                    SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES 
+                    WHERE TABLE_NAME IN ('ProductBundleInstances', 'ProductBundleInstanceVersions')";
 
-                // Version history table (partitioned by date for scalability)
-                var createVersionsTableSql = @"
-                    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ProductBundleInstanceVersions' AND xtype='U')
-                    CREATE TABLE ProductBundleInstanceVersions (
-                        Id NVARCHAR(450) NOT NULL,
-                        VersionNumber BIGINT NOT NULL,
-                        ProductBundleId NVARCHAR(450) NOT NULL,
-                        ProductBundleVersion NVARCHAR(100) NOT NULL,
-                        JsonDocument NVARCHAR(MAX) NOT NULL,
-                        ChangeType NVARCHAR(50) NOT NULL, -- CREATE, UPDATE, DELETE
-                        ChangedBy NVARCHAR(255) NULL,
-                        CreatedAt DATETIME2 DEFAULT GETUTCDATE(),
-                        PRIMARY KEY (Id, VersionNumber),
-                        INDEX IX_ProductBundleInstanceVersions_ProductBundleId (ProductBundleId),
-                        INDEX IX_ProductBundleInstanceVersions_CreatedAt (CreatedAt),
-                        INDEX IX_ProductBundleInstanceVersions_ChangeType (ChangeType)
-                    )";
+                using var checkCommand = new SqlCommand(checkTablesSql, connection);
+                var tableCount = (int)await checkCommand.ExecuteScalarAsync();
 
-                using var command1 = new SqlCommand(createCurrentTableSql, connection);
-                await command1.ExecuteNonQueryAsync();
+                if (tableCount < 2)
+                {
+                    throw new InvalidOperationException(
+                        "Required database tables are missing. Please run the database setup scripts from the InitialSetup folder first. " +
+                        "See INSTALL.md for detailed setup instructions.");
+                }
 
-                using var command2 = new SqlCommand(createVersionsTableSql, connection);
-                await command2.ExecuteNonQueryAsync();
-
-                _logger.LogDebug("Versioned database tables initialized successfully");
+                _logger.LogDebug("Database connection and table verification successful");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to initialize versioned database tables");
+                _logger.LogError(ex, "Failed to initialize database connection or verify tables");
                 throw;
             }
         }
@@ -672,45 +648,39 @@ namespace ProductBundles.Core.Storage
         }
 
         /// <summary>
-        /// Creates database partitions for better performance with large datasets
+        /// Verifies that database partitions are properly configured for better performance with large datasets
+        /// Note: Partitions should be created using the setup scripts in the InitialSetup folder
         /// </summary>
-        public async Task CreatePartitionsAsync()
+        public async Task<bool> VerifyPartitionsAsync()
         {
             try
             {
                 using var connection = new SqlConnection(_connectionString);
                 await connection.OpenAsync();
 
-                // Create partition function and scheme for date-based partitioning
-                var createPartitionSql = @"
-                    -- Create partition function if it doesn't exist
-                    IF NOT EXISTS (SELECT * FROM sys.partition_functions WHERE name = 'PF_VersionsByMonth')
-                    BEGIN
-                        CREATE PARTITION FUNCTION PF_VersionsByMonth (DATETIME2)
-                        AS RANGE RIGHT FOR VALUES (
-                            '2024-01-01', '2024-02-01', '2024-03-01', '2024-04-01',
-                            '2024-05-01', '2024-06-01', '2024-07-01', '2024-08-01',
-                            '2024-09-01', '2024-10-01', '2024-11-01', '2024-12-01',
-                            '2025-01-01'
-                        )
-                    END
+                // Check if partition function exists
+                var checkPartitionSql = @"
+                    SELECT COUNT(*) FROM sys.partition_functions WHERE name = 'PF_VersionsByMonth'";
 
-                    -- Create partition scheme if it doesn't exist
-                    IF NOT EXISTS (SELECT * FROM sys.partition_schemes WHERE name = 'PS_VersionsByMonth')
-                    BEGIN
-                        CREATE PARTITION SCHEME PS_VersionsByMonth
-                        AS PARTITION PF_VersionsByMonth
-                        ALL TO ([PRIMARY])
-                    END";
+                using var command = new SqlCommand(checkPartitionSql, connection);
+                var partitionCount = (int)await command.ExecuteScalarAsync();
 
-                using var command = new SqlCommand(createPartitionSql, connection);
-                await command.ExecuteNonQueryAsync();
+                var partitionsExist = partitionCount > 0;
+                
+                if (partitionsExist)
+                {
+                    _logger.LogInformation("Database partitions are configured for improved scalability");
+                }
+                else
+                {
+                    _logger.LogInformation("Database partitions are not configured. Consider running the partitioning setup script for high-volume scenarios");
+                }
 
-                _logger.LogInformation("Database partitions created successfully for improved scalability");
+                return partitionsExist;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create database partitions");
+                _logger.LogError(ex, "Failed to verify database partitions");
                 throw;
             }
         }
