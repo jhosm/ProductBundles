@@ -1,3 +1,3 @@
 - Mover o CustomerEventSource para um projeto novo: ProductBundles.SampleEventSources.
 - Criar OpenAPI para a API.
-- Retirar a criação dos schemas das classes e incluir numa pasta de setup.
+

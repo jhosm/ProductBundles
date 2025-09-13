@@ -1,0 +1,484 @@
+openapi: 3.1.1
+info:
+  title: ProductBundles API
+  description: |
+    API for managing ProductBundles and their instances. ProductBundles are plugin-based configurations
+    that can be instantiated with specific property values. This API provides endpoints to:
+    - Browse available ProductBundles and their metadata
+    - Create, read, update, and delete ProductBundle instances
+  version: 1.0.0
+  contact:
+    name: ProductBundles API Support
+  license:
+    name: MIT
+servers:
+  - url: https://localhost:7001
+    description: Development server (HTTPS)
+  - url: http://localhost:5000
+    description: Development server (HTTP)
+paths:
+  /ProductBundles:
+    get:
+      summary: Get all ProductBundles
+      description: Retrieves a list of all available ProductBundles loaded from plugins
+      operationId: getProductBundles
+      tags:
+        - ProductBundles
+      responses:
+        '200':
+          description: Successfully retrieved ProductBundles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductBundleDto'
+              example:
+                - id: "sample-product-bundle"
+                  friendlyName: "Sample Product Bundle"
+                  description: "A sample product bundle for demonstration"
+                  version: "1.0.0"
+                  properties:
+                    - name: "ConnectionString"
+                      description: "Database connection string"
+                      defaultValue: "Server=localhost;Database=Sample;"
+                      isRequired: true
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /ProductBundles/{id}:
+    get:
+      summary: Get ProductBundle by ID
+      description: Retrieves a specific ProductBundle by its identifier
+      operationId: getProductBundleById
+      tags:
+        - ProductBundles
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the ProductBundle
+          schema:
+            type: string
+          example: "sample-product-bundle"
+      responses:
+        '200':
+          description: Successfully retrieved ProductBundle
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductBundleDto'
+              example:
+                id: "sample-product-bundle"
+                friendlyName: "Sample Product Bundle"
+                description: "A sample product bundle for demonstration"
+                version: "1.0.0"
+                properties:
+                  - name: "ConnectionString"
+                    description: "Database connection string"
+                    defaultValue: "Server=localhost;Database=Sample;"
+                    isRequired: true
+        '404':
+          description: ProductBundle not found
+          content:
+            application/json:
+              schema:
+                type: string
+              example: "ProductBundle with ID 'invalid-id' not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /ProductBundleInstances/{id}:
+    get:
+      summary: Get ProductBundleInstance by ID
+      description: Retrieves a specific ProductBundleInstance by its identifier
+      operationId: getProductBundleInstanceById
+      tags:
+        - ProductBundleInstances
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the ProductBundleInstance
+          schema:
+            type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Successfully retrieved ProductBundleInstance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductBundleInstanceDto'
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                productBundleId: "sample-product-bundle"
+                productBundleVersion: "1.0.0"
+                properties:
+                  ConnectionString: "Server=prod-server;Database=MyApp;"
+                  MaxRetries: 5
+        '404':
+          description: ProductBundleInstance not found
+          content:
+            application/json:
+              schema:
+                type: string
+              example: "ProductBundleInstance with ID '123e4567-e89b-12d3-a456-426614174000' not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+    put:
+      summary: Update ProductBundleInstance
+      description: Updates an existing ProductBundleInstance with new property values and version
+      operationId: updateProductBundleInstance
+      tags:
+        - ProductBundleInstances
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the ProductBundleInstance to update
+          schema:
+            type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductBundleInstanceDto'
+            example:
+              productBundleVersion: "1.1.0"
+              properties:
+                ConnectionString: "Server=updated-server;Database=MyApp;"
+                MaxRetries: 10
+      responses:
+        '200':
+          description: Successfully updated ProductBundleInstance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductBundleInstanceDto'
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                productBundleId: "sample-product-bundle"
+                productBundleVersion: "1.1.0"
+                properties:
+                  ConnectionString: "Server=updated-server;Database=MyApp;"
+                  MaxRetries: 10
+        '404':
+          description: ProductBundleInstance not found
+          content:
+            application/json:
+              schema:
+                type: string
+              example: "ProductBundleInstance with ID '123e4567-e89b-12d3-a456-426614174000' not found"
+        '400':
+          description: Bad request - invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+    delete:
+      summary: Delete ProductBundleInstance
+      description: Deletes a ProductBundleInstance by its identifier
+      operationId: deleteProductBundleInstance
+      tags:
+        - ProductBundleInstances
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The unique identifier of the ProductBundleInstance to delete
+          schema:
+            type: string
+          example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '204':
+          description: Successfully deleted ProductBundleInstance
+        '404':
+          description: ProductBundleInstance not found
+          content:
+            application/json:
+              schema:
+                type: string
+              example: "ProductBundleInstance with ID '123e4567-e89b-12d3-a456-426614174000' not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /ProductBundleInstances:
+    post:
+      summary: Create ProductBundleInstance
+      description: Creates a new ProductBundleInstance with the specified ProductBundle and properties
+      operationId: createProductBundleInstance
+      tags:
+        - ProductBundleInstances
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductBundleInstanceDto'
+            example:
+              productBundleId: "sample-product-bundle"
+              productBundleVersion: "1.0.0"
+              properties:
+                ConnectionString: "Server=localhost;Database=MyApp;"
+                MaxRetries: 3
+      responses:
+        '201':
+          description: Successfully created ProductBundleInstance
+          headers:
+            Location:
+              description: URL of the created ProductBundleInstance
+              schema:
+                type: string
+              example: "/ProductBundleInstances/123e4567-e89b-12d3-a456-426614174000"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductBundleInstanceDto'
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                productBundleId: "sample-product-bundle"
+                productBundleVersion: "1.0.0"
+                properties:
+                  ConnectionString: "Server=localhost;Database=MyApp;"
+                  MaxRetries: 3
+        '409':
+          description: Conflict - ProductBundleInstance already exists
+          content:
+            application/json:
+              schema:
+                type: string
+              example: "ProductBundleInstance with ID '123e4567-e89b-12d3-a456-426614174000' already exists"
+        '400':
+          description: Bad request - invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+
+components:
+  schemas:
+    ProductBundleDto:
+      type: object
+      description: Data transfer object for ProductBundle information
+      required:
+        - id
+        - friendlyName
+        - description
+        - version
+        - properties
+      properties:
+        id:
+          type: string
+          description: The bundle identifier
+          example: "sample-product-bundle"
+        friendlyName:
+          type: string
+          description: The friendly name of the bundle
+          example: "Sample Product Bundle"
+        description:
+          type: string
+          description: The description of the bundle
+          example: "A sample product bundle for demonstration purposes"
+        version:
+          type: string
+          description: The version of the bundle
+          example: "1.0.0"
+        properties:
+          type: array
+          description: The list of properties associated with the bundle
+          items:
+            $ref: '#/components/schemas/PropertyDto'
+
+    PropertyDto:
+      type: object
+      description: Data transfer object for Property information
+      required:
+        - name
+        - description
+        - isRequired
+      properties:
+        name:
+          type: string
+          description: The property name
+          example: "ConnectionString"
+        description:
+          type: string
+          description: The property description
+          example: "Database connection string for the application"
+        defaultValue:
+          description: The default value of the property
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: object
+            - type: array
+          nullable: true
+          example: "Server=localhost;Database=Sample;"
+        isRequired:
+          type: boolean
+          description: Whether the property is required
+          example: true
+
+    ProductBundleInstanceDto:
+      type: object
+      description: Data transfer object for ProductBundleInstance information
+      required:
+        - id
+        - productBundleId
+        - productBundleVersion
+        - properties
+      properties:
+        id:
+          type: string
+          description: The unique identifier for this bundle instance
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        productBundleId:
+          type: string
+          description: The identifier of the ProductBundle this instance is attached to
+          example: "sample-product-bundle"
+        productBundleVersion:
+          type: string
+          description: The version of the ProductBundle this instance is attached to
+          example: "1.0.0"
+        properties:
+          type: object
+          description: Dictionary of property values for this instance (property name as key, property value as value)
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+              - type: object
+              - type: array
+            nullable: true
+          example:
+            ConnectionString: "Server=localhost;Database=MyApp;"
+            MaxRetries: 5
+            EnableLogging: true
+
+    CreateProductBundleInstanceDto:
+      type: object
+      description: Data transfer object for creating a new ProductBundleInstance
+      required:
+        - productBundleId
+        - productBundleVersion
+        - properties
+      properties:
+        productBundleId:
+          type: string
+          description: The identifier of the ProductBundle this instance is attached to
+          example: "sample-product-bundle"
+        productBundleVersion:
+          type: string
+          description: The version of the ProductBundle this instance is attached to
+          example: "1.0.0"
+        properties:
+          type: object
+          description: Dictionary of property values for this instance (property name as key, property value as value)
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+              - type: object
+              - type: array
+            nullable: true
+          example:
+            ConnectionString: "Server=localhost;Database=MyApp;"
+            MaxRetries: 3
+            EnableLogging: true
+
+    UpdateProductBundleInstanceDto:
+      type: object
+      description: Data transfer object for updating an existing ProductBundleInstance
+      required:
+        - productBundleVersion
+        - properties
+      properties:
+        productBundleVersion:
+          type: string
+          description: The version of the ProductBundle this instance is attached to
+          example: "1.1.0"
+        properties:
+          type: object
+          description: Dictionary of property values for this instance (property name as key, property value as value)
+          additionalProperties:
+            oneOf:
+              - type: string
+              - type: number
+              - type: boolean
+              - type: object
+              - type: array
+            nullable: true
+          example:
+            ConnectionString: "Server=updated-server;Database=MyApp;"
+            MaxRetries: 10
+            EnableLogging: false
+
+    ProblemDetails:
+      type: object
+      description: RFC 7807 Problem Details for HTTP APIs
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI reference that identifies the problem type
+          example: "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type
+          example: "Bad Request"
+        status:
+          type: integer
+          description: The HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem
+          example: "The request body contains invalid data"
+        instance:
+          type: string
+          format: uri
+          description: A URI reference that identifies the specific occurrence of the problem
+          example: "/ProductBundleInstances"
+
+tags:
+  - name: ProductBundles
+    description: Operations for managing ProductBundle definitions and metadata
+  - name: ProductBundleInstances
+    description: Operations for managing ProductBundle instances with specific configurations
