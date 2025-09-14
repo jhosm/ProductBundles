@@ -7,6 +7,7 @@ using ProductBundles.Core.Storage;
 using ProductBundles.Sdk;
 using Hangfire;
 using Hangfire.MemoryStorage;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,8 +43,9 @@ builder.Services.AddHangfire(configuration => configuration
     .UseRecommendedSerializerSettings()
     .UseMemoryStorage()); // Use in-memory storage for development
 
-// Add basic health checks
-builder.Services.AddHealthChecks();
+// Add health checks with storage connectivity
+builder.Services.AddHealthChecks()
+    .AddProductBundleStorageHealthChecks(builder.Configuration);
 
 // Add Hangfire server
 builder.Services.AddHangfireServer(options =>
@@ -260,5 +262,28 @@ app.MapDelete("/ProductBundleInstances/{id}", async (string id, IProductBundleIn
 
 // Basic health check endpoint
 app.MapHealthChecks("/health");
+
+// Detailed health check endpoint with JSON response
+app.MapHealthChecks("/health/detailed", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var response = new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(x => new
+            {
+                name = x.Key,
+                status = x.Value.Status.ToString(),
+                description = x.Value.Description,
+                exception = x.Value.Exception?.Message,
+                duration = x.Value.Duration.TotalMilliseconds
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds
+        };
+        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
+    }
+});
 
 app.Run();

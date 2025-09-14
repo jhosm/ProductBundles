@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
 using ProductBundles.Core.Resilience;
 using ProductBundles.Core.Serialization;
 using ProductBundles.Core.Storage;
@@ -87,6 +89,9 @@ namespace ProductBundles.Core.Extensions
             {
                 throw new InvalidOperationException(validationResult.GetFormattedErrors());
             }
+
+            // Register the storage configuration for dependency injection
+            services.Configure<StorageConfiguration>(configuration.GetSection(sectionName));
 
             // Register storage based on provider type
             switch (storageConfig.Provider.ToLowerInvariant())
@@ -334,6 +339,48 @@ namespace ProductBundles.Core.Extensions
             });
             
             return services;
+        }
+
+        #endregion
+
+        #region Health Check Services
+
+        /// <summary>
+        /// Adds storage health checks based on the configured storage provider
+        /// </summary>
+        /// <param name="healthChecksBuilder">The health checks builder</param>
+        /// <param name="configuration">The configuration instance</param>
+        /// <param name="sectionName">The configuration section name (defaults to "ProductBundleStorage")</param>
+        /// <returns>The health checks builder for chaining</returns>
+        public static IHealthChecksBuilder AddProductBundleStorageHealthChecks(
+            this IHealthChecksBuilder healthChecksBuilder,
+            IConfiguration configuration,
+            string sectionName = "ProductBundleStorage")
+        {
+            var storageConfig = configuration.GetSection(sectionName).Get<StorageConfiguration>();
+            
+            if (storageConfig == null)
+            {
+                return healthChecksBuilder;
+            }
+
+            // Add health check based on provider type
+            switch (storageConfig.Provider.ToLowerInvariant())
+            {
+                case "filesystem":
+                    healthChecksBuilder.AddCheck<FileSystemStorageHealthCheck>("storage", tags: new[] { "ready" });
+                    break;
+
+                case "mongodb":
+                    healthChecksBuilder.AddCheck<MongoDbStorageHealthCheck>("storage", tags: new[] { "ready" });
+                    break;
+
+                case "sqlserver":
+                    healthChecksBuilder.AddCheck<SqlServerStorageHealthCheck>("storage", tags: new[] { "ready" });
+                    break;
+            }
+
+            return healthChecksBuilder;
         }
 
         #endregion
