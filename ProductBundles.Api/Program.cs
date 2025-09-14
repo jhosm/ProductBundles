@@ -42,6 +42,9 @@ builder.Services.AddHangfire(configuration => configuration
     .UseRecommendedSerializerSettings()
     .UseMemoryStorage()); // Use in-memory storage for development
 
+// Add basic health checks
+builder.Services.AddHealthChecks();
+
 // Add Hangfire server
 builder.Services.AddHangfireServer(options =>
 {
@@ -254,5 +257,8 @@ app.MapDelete("/ProductBundleInstances/{id}", async (string id, IProductBundleIn
 })
 .WithName("DeleteProductBundleInstance")
 .WithOpenApi();
+
+// Basic health check endpoint
+app.MapHealthChecks("/health");
 
 app.Run();
