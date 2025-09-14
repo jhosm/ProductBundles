@@ -23,6 +23,9 @@ namespace ProductBundles.UnitTests
             
             try
             {
+                // Create test database and tables
+                await InitializeTestDatabase();
+                
                 // Clean up any existing test data first
                 await CleanupTestData();
                 
@@ -50,6 +53,38 @@ namespace ProductBundles.UnitTests
             }
         }
 
+        private async Task InitializeTestDatabase()
+        {
+            // Connection string without database to create the database
+            var masterConnectionString = "Server=localhost,1433;Database=master;User Id=sa;Password=ProductBundles123!;TrustServerCertificate=true;";
+            
+            using var masterConnection = new SqlConnection(masterConnectionString);
+            await masterConnection.OpenAsync();
+            
+            // Create test database if it doesn't exist
+            var createDbSql = @"
+                IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ProductBundlesTest')
+                CREATE DATABASE ProductBundlesTest";
+            using var createDbCommand = new SqlCommand(createDbSql, masterConnection);
+            await createDbCommand.ExecuteNonQueryAsync();
+            
+            // Now connect to the test database and create tables
+            using var testConnection = new SqlConnection(TestConnectionString);
+            await testConnection.OpenAsync();
+            
+            // Read and execute the table creation script
+            var scriptPath = Path.Combine(
+                Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!,
+                "..", "..", "..", "..", "InitialSetup", "SqlServer", "01-create-tables.sql");
+            
+            if (File.Exists(scriptPath))
+            {
+                var createTablesSql = await File.ReadAllTextAsync(scriptPath);
+                using var createTablesCommand = new SqlCommand(createTablesSql, testConnection);
+                await createTablesCommand.ExecuteNonQueryAsync();
+            }            
+        }
+
         private async Task CleanupTestData()
         {
             try
@@ -57,18 +92,14 @@ namespace ProductBundles.UnitTests
                 using var connection = new SqlConnection(TestConnectionString);
                 await connection.OpenAsync();
                 
-                // Drop tables to ensure clean schema for versioned storage
-                var dropVersionsTableSql = @"
-                    IF EXISTS (SELECT * FROM sysobjects WHERE name='ProductBundleInstanceVersions' AND xtype='U')
-                    DROP TABLE ProductBundleInstanceVersions";
-                using var dropVersionsCommand = new SqlCommand(dropVersionsTableSql, connection);
-                await dropVersionsCommand.ExecuteNonQueryAsync();
+                // Clear data from tables but keep the schema
+                var clearVersionsTableSql = "DELETE FROM ProductBundleInstanceVersions";
+                using var clearVersionsCommand = new SqlCommand(clearVersionsTableSql, connection);
+                await clearVersionsCommand.ExecuteNonQueryAsync();
                 
-                var dropInstancesTableSql = @"
-                    IF EXISTS (SELECT * FROM sysobjects WHERE name='ProductBundleInstances' AND xtype='U')
-                    DROP TABLE ProductBundleInstances";
-                using var dropInstancesCommand = new SqlCommand(dropInstancesTableSql, connection);
-                await dropInstancesCommand.ExecuteNonQueryAsync();
+                var clearInstancesTableSql = "DELETE FROM ProductBundleInstances";
+                using var clearInstancesCommand = new SqlCommand(clearInstancesTableSql, connection);
+                await clearInstancesCommand.ExecuteNonQueryAsync();
             }
             catch (Exception ex)
             {
