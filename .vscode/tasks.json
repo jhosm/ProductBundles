@@ -7,10 +7,15 @@
             "type": "process",
             "args": [
                 "build",
+                "${workspaceFolder}/ProductBundles.Api/ProductBundles.Api.csproj",
                 "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+                "/consoleloggerparameters:NoSummary"
             ],
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "publish",
@@ -18,8 +23,9 @@
             "type": "process",
             "args": [
                 "publish",
+                "${workspaceFolder}/ProductBundles.Api/ProductBundles.Api.csproj",
                 "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+                "/consoleloggerparameters:NoSummary"
             ],
             "problemMatcher": "$msCompile"
         },
@@ -29,7 +35,9 @@
             "type": "process",
             "args": [
                 "watch",
-                "run"
+                "run",
+                "--project",
+                "${workspaceFolder}/ProductBundles.Api/ProductBundles.Api.csproj"
             ],
             "problemMatcher": "$msCompile"
         }

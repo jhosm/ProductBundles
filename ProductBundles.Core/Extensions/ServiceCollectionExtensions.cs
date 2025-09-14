@@ -3,7 +3,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using ProductBundles.Core.Resilience;
 using ProductBundles.Core.Serialization;
 using ProductBundles.Core.Storage;
+using ProductBundles.Core.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 using MongoDB.Driver;
 
@@ -59,6 +61,61 @@ namespace ProductBundles.Core.Extensions
         #region Storage Services
 
         /// <summary>
+        /// Adds storage services for ProductBundle instances based on configuration
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="configuration">The configuration instance</param>
+        /// <param name="sectionName">The configuration section name (defaults to "ProductBundleStorage")</param>
+        /// <param name="logger">Optional logger for configuration process (if null, configuration logging is skipped)</param>
+        /// <returns>The service collection for chaining</returns>
+        /// <exception cref="InvalidOperationException">Thrown when storage configuration is invalid</exception>
+        public static IServiceCollection AddProductBundleStorageFromConfiguration(
+            this IServiceCollection services,
+            IConfiguration configuration,
+            string sectionName = "ProductBundleStorage")
+        {
+            var storageConfig = configuration.GetSection(sectionName).Get<StorageConfiguration>();
+            
+            if (storageConfig == null)
+            {
+                throw new InvalidOperationException($"Storage configuration section '{sectionName}' not found or is empty. Please configure storage in appsettings.json");
+            }
+
+            // Validate the configuration
+            var validationResult = storageConfig.Validate();
+            if (!validationResult.IsValid)
+            {
+                throw new InvalidOperationException(validationResult.GetFormattedErrors());
+            }
+
+            // Register storage based on provider type
+            switch (storageConfig.Provider.ToLowerInvariant())
+            {
+                case "filesystem":
+                    var fsDirectory = storageConfig.FileSystem!.StorageDirectory;
+                    services.AddProductBundleFileSystemStorage(fsDirectory);
+                    break;
+
+                case "mongodb":
+                    var mongoConfig = storageConfig.MongoDB!;
+                    services.AddProductBundleMongoStorage(
+                        mongoConfig.ConnectionString, 
+                        mongoConfig.DatabaseName, 
+                        mongoConfig.CollectionName);
+                    break;
+
+                case "sqlserver":
+                    var sqlConnectionString = storageConfig.SqlServer!.ConnectionString;
+                    services.AddProductBundleSqlServerStorage(sqlConnectionString);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported storage provider: {storageConfig.Provider}");
+            }
+            return services;
+        }
+
+        /// <summary>
         /// Adds file system storage for ProductBundle instances
         /// </summary>
         /// <param name="services">The service collection</param>
@@ -81,7 +138,7 @@ namespace ProductBundles.Core.Extensions
                 var options = provider.GetRequiredService<ProductBundleInstanceStorageOptions>();
                 var serializer = provider.GetRequiredService<IProductBundleInstanceSerializer>();
                 var logger = provider.GetService<ILogger<FileSystemProductBundleInstanceStorage>>();
-                
+                logger?.LogInformation("Configuring FileSystem storage with directory: '{StorageDirectory}'", storageDirectory);                
                 return new FileSystemProductBundleInstanceStorage(options.StorageDirectory, serializer, logger);
             });
 
@@ -141,6 +198,9 @@ namespace ProductBundles.Core.Extensions
             services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
             {
                 var logger = provider.GetService<ILogger<MongoProductBundleInstanceStorage>>();
+                logger?.LogInformation("Configuring MongoDB storage with Database: '{DatabaseName}', Collection: '{CollectionName}'", 
+                    databaseName, collectionName);
+
                 return new MongoProductBundleInstanceStorage(connectionString, databaseName, collectionName, logger);
             });
 
@@ -163,6 +223,10 @@ namespace ProductBundles.Core.Extensions
             services.TryAddSingleton<IProductBundleInstanceStorage>(provider =>
             {
                 var logger = provider.GetService<ILogger<SqlServerVersionedProductBundleInstanceStorage>>();
+                var safeConnectionString = connectionString.Contains("Password") 
+                    ? connectionString.Substring(0, Math.Min(15, connectionString.Length)) + "..." 
+                    : connectionString;
+                logger?.LogInformation("Configuring SQL Server storage with connection: '{ConnectionString}'", safeConnectionString);
                 return new SqlServerVersionedProductBundleInstanceStorage(connectionString, logger);
             });
 
@@ -182,6 +246,7 @@ namespace ProductBundles.Core.Extensions
             services.TryAddSingleton<IProductBundleInstanceStorage, TStorage>();
             return services;
         }
+
 
         #endregion
 

@@ -27,8 +27,10 @@ builder.Services
     .AddProductBundleJsonSerialization(jsonOptions => {
         jsonOptions.WriteIndented = true;
         jsonOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
-    })
-    .AddProductBundleFileSystemStorage(Path.Combine(Directory.GetCurrentDirectory(), "storage"));
+    });
+
+// Configure storage (logging will be handled internally when DI container is available)
+builder.Services.AddProductBundleStorageFromConfiguration(builder.Configuration);
 
 // Register plugin resilience services with 30 second timeout
 builder.Services.AddPluginResilience(TimeSpan.FromSeconds(30));
