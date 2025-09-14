@@ -265,27 +265,30 @@ app.MapDelete("/ProductBundleInstances/{id}", async (string id, IProductBundleIn
 // Basic health check endpoint
 app.MapHealthChecks("/health");
 
-// Detailed health check endpoint with JSON response
-app.MapHealthChecks("/health/detailed", new HealthCheckOptions
+// Detailed health check endpoint with JSON response - only in Development
+if (app.Environment.IsDevelopment())
 {
-    ResponseWriter = async (context, report) =>
+    app.MapHealthChecks("/health/detailed", new HealthCheckOptions
     {
-        context.Response.ContentType = "application/json";
-        var response = new
+        ResponseWriter = async (context, report) =>
         {
-            status = report.Status.ToString(),
-            checks = report.Entries.Select(x => new
+            context.Response.ContentType = "application/json";
+            var response = new
             {
-                name = x.Key,
-                status = x.Value.Status.ToString(),
-                description = x.Value.Description,
-                exception = x.Value.Exception?.Message,
-                duration = x.Value.Duration.TotalMilliseconds
-            }),
-            totalDuration = report.TotalDuration.TotalMilliseconds
-        };
-        await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
-    }
-});
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(x => new
+                {
+                    name = x.Key,
+                    status = x.Value.Status.ToString(),
+                    description = x.Value.Description,
+                    exception = x.Value.Exception?.Message,
+                    duration = x.Value.Duration.TotalMilliseconds
+                }),
+                totalDuration = report.TotalDuration.TotalMilliseconds
+            };
+            await context.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(response));
+        }
+    });
+}
 
 app.Run();
