@@ -1,5 +1,6 @@
 using ProductBundles.Api.Models;
 using ProductBundles.Api.Services;
+using ProductBundles.Api.HealthChecks;
 using ProductBundles.Core;
 using ProductBundles.Core.BackgroundJobs;
 using ProductBundles.Core.Extensions;
@@ -43,9 +44,10 @@ builder.Services.AddHangfire(configuration => configuration
     .UseRecommendedSerializerSettings()
     .UseMemoryStorage()); // Use in-memory storage for development
 
-// Add health checks with storage connectivity
+// Add health checks with storage connectivity and background job processing
 builder.Services.AddHealthChecks()
-    .AddProductBundleStorageHealthChecks(builder.Configuration);
+    .AddProductBundleStorageHealthChecks(builder.Configuration)
+    .AddCheck<HangfireHealthCheck>("hangfire", tags: new[] { "ready" });
 
 // Add Hangfire server
 builder.Services.AddHangfireServer(options =>
